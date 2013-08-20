@@ -108,4 +108,17 @@ boxScatterPlot <- function(x,y,ylabText="Major readCount",xlabText="Minor readCo
   
 }
 
+boxScatterPlot2 <- function(x,y,ylabText="Major readCount",xlabText="Minor readCount",title ="Enhanced Scatterplot"){
+  par(fig=c(0,0.8,0,0.8), new=TRUE)
+  plot(x, y , xlab=xlabText,
+       ylab=ylabText)
+  par(fig=c(0,0.8,0.55,1), new=TRUE)
+  boxplot(x, horizontal=TRUE, axes=FALSE)
+  par(fig=c(0.65,1,0,0.8),new=TRUE)
+  boxplot(y, axes=FALSE)
+  mtext(title, side=3, outer=TRUE, line=-3)
+  
+}
+
+
 
