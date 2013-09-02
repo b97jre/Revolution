@@ -4,10 +4,14 @@
 ###############################################################################
 
 
-main <-function(){
-	#load dataset	
-	sampleData <- read.table("Unified.output.raw.snps.indels.Final.not_centromere.Crubella_183_only_exons_unique.heterozygous.homozygous.vcf.Sample.vcf.Rfriendly",header=TRUE,sep ="\t")
-
+main <-function(fileName="Unified.output.raw.snps.indels.Final.not_centromere.Crubella_183_only_exons_unique.heterozygous.homozygous.vcf.Sample.vcf.Rfriendly", dataDir=".",
+                annotationFile=""){
+             
+  
+  file <- paste(dataDir,fileName,sep="/")
+  #load dataset	
+  sampleData <- read.table(file,header=TRUE,sep ="\t")
+  
 	# read in different samples
 	DNAInterSamples <- c("Inter3.1","Inter4.1","Inter5.1")
 	DNAIntraSamples <- c("Intra6.3","Intra7.2","Intra8.2")
@@ -26,13 +30,19 @@ main <-function(){
 	# Calculate pValues 
 	DataSetInterHeteroAbundantBOTHwithPvalue <- Pvaluescalculation(DataSetInterHeteroAbundantBOTH, RNAInterSamples,DNAInterSamples)  
 	
+  # Correct for multiple testing
+  DataSetInterHeteroAbundantBOTHwithPvalue<-as.data.frame(DataSetInterHeteroAbundantBOTHwithPvalue)
+  DataSetInterHeteroAbundantBOTHwithPvalueCorrected <- MultipleTestCorrection(DataSetInterHeteroAbundantBOTHwithPvalue,RNAInterSamples)
+	
+  DataSetInterHeteroAbundantBOTHwithPvalueCorrected <- AnnotateSNPs(DataSetInterHeteroAbundantBOTHwithPvalueCorrected,dataDir, annotationFile)
+  
 	
 	#Under development
 	printPvalues(DataSetInterHeteroAbundantBOTHwithPvalue,RNAInterSamples,DNAInterSamples,"test.pdf")	
 	
-	
-	
 }
+
+
 
 
 printPvalues <- function(Dataset,RNAsamples,DNAsamples, pdfFileName){
@@ -117,9 +127,35 @@ Pvaluescalculation <- function(testData,RNAsamples,DNAsamples){
 }
 
 
+MultipleTestCorrection <- function(testData,RNAsamples) {
+  
+  for(i in 1:length(RNAsamples)){
+    RNAsample = strsplit(RNAsamples[i], '_')
+    pValue=paste(RNAsamples[i], "pValue", sep="_")
+    pValue2= as.numeric(testData[,which(colnames(testData)==pValue)])
+    pValuesCorrectedName=paste(RNAsamples[i], "pValueCorrected", sep="_")
+    testData[pValuesCorrectedName]<- p.adjust(pValue2,method="BH")
+  }
+  return(testData)
+}
+
+
+
+
 BinTest <- function(x, count1RNA, TotalRNA,count1DNA,TotalDNA){
 	temp <- binom.test(as.numeric(x[count1RNA]),as.numeric(x[TotalRNA]),p=(as.numeric(x[count1DNA])/as.numeric(x[TotalDNA])), alternative="two.sided")
 	return (temp$p.value)
 }
 
+
+random <- function(x){
+  #check length of array
+  s = length(x)
+  #randomly pick a number between 1 and length of array
+  pointer = floor(s*runif(1, min = 0, max = 1))+1
+  # check the exception if the random value became exactly 1 then reduce pointer by one
+  if(pointer > s){pointer=s}
+  # return the randomly picked value from array	  
+  return (x[pointer])
+}
 
