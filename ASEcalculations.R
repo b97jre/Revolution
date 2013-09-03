@@ -11,7 +11,10 @@ main <-function(fileName="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygous
   
   
   file <- paste(dataDir,fileName,sep="/")
+<<<<<<< HEAD
   annotationFile <- paste(dataDir,annotation,sep="/")
+=======
+>>>>>>> 1371683fd821b007abdc8ad2b4116dc71dae8b87
   
   #load dataset  
   sampleData <- read.table(file,header=TRUE,sep ="\t")
@@ -59,8 +62,12 @@ main <-function(fileName="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygous
   ASEinfo <- rbind(ASEinfo, getASEinfo(Intra8_2_SampleData,Intra8_2_RNA,rounds,cutoffNominal,cutoffAdjusted))
   
   #Under development
+<<<<<<< HEAD
   #printPvalues(DataSetInterHeteroAbundantBOTHwithPvalue,RNAInterSamples,DNAInterSamples,"test.pdf")	
   return (ASEinfo)
+=======
+  printPvalues(DataSetInterHeteroAbundantBOTHwithPvalue,RNAInterSamples,DNAInterSamples,"test.pdf")	
+>>>>>>> 1371683fd821b007abdc8ad2b4116dc71dae8b87
   
 }
 
