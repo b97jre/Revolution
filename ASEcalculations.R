@@ -6,7 +6,8 @@
 
 
 main <-function(fileName="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygousRegions.Crubella_183_only_exons_unique.vcf.Sample.vcf.Rfriendly", dataDir="/gulo/proj_nobackup/b2012122/private/ASE",
-                annotation="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygousRegions.Crubella_183_only_exons_unique.vcf.Sample.Crubella_183_gene.VCFannotaion"){
+                annotation="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygousRegions.Crubella_183_only_exons_unique.vcf.Sample.Crubella_183_gene.VCFannotaion",  
+                rounds = 10 ,cutoffNominal=0.005, cutoffAdjusted=0.1){
              
   
     file <- paste(dataDir,fileName,sep="/")
@@ -23,39 +24,38 @@ main <-function(fileName="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygous
   RNAIntraSamples <- c("Intra6_3_F","Intra6_3_L","Intra7_2_1_F","Intra7_2_1_L","Intra7_2_2_F","Intra7_2_2_L","Intra7_2_3_F","Intra7_2_3_L","Intra8_2_1_F","Intra8_2_1_L")
   AllSamples <- c(DNAInterSamples,DNAIntraSamples,RNAInterSamples,RNAIntraSamples)
   
-  rounds = 10
-  cutoffNominal=0.005 
-  cutoffAdjusted=0.1
     
+  # 
+  ASEinfo = data.frame()
   Inter3_1_DNA <- c("Inter3.1")
   Inter3_1_RNA <-c("Inter3_1_1_F","Inter3_1_1_L")  
   Inter3_1_SampleData <- getPvalues(sampleData,Inter3_1_DNA,Inter3_1_RNA)
-  ASEinfo <- getASEinfo(Inter3_1_SampleData,Inter3_1_RNA,rounds,cutoffNominal,cutoffAdjusted)
+  ASEinfo <- rbind(ASEinfo, getASEinfo(Inter3_1_SampleData,Inter3_1_RNA,rounds,cutoffNominal,cutoffAdjusted))
     
   Inter4_1_DNA <- c("Inter4.1")
-  Inter4_1_RNA <-c("Inter4_1_1_F","Inter4_1_1_L","Inter4_1_2_F","Inter4_1_2_L","Inter4_1_3_F","Inter4_1_3_L")  
-    Inter4_1_SampleData <- getPvalues(sampleData,Inter3_1_DNA,Inter3_1_RNA)
-    ASEinfo <- getASEinfo(Inter4_1_SampleData,Inter3_1_RNA,rounds,cutoffNominal,cutoffAdjusted)
+  Inter4_1_RNA <-c("Inter4_1_1_F","Inter4_1_1_L","Inter4_1_2_F","Inter4_1_2_L","Inter4_1_3_F","Inter4_1_4_L")  
+  Inter4_1_SampleData <- getPvalues(sampleData,Inter4_1_DNA,Inter4_1_RNA)
+  ASEinfo <- rbind(ASEinfo, getASEinfo(Inter4_1_SampleData,Inter4_1_RNA,rounds,cutoffNominal,cutoffAdjusted))
     
   Inter5_1_DNA <- c("Inter5.1")
   Inter5_1_RNA <-c("Inter5_1_1_F","Inter5_1_1_L")  
-    Inter5_1_SampleData <- getPvalues(sampleData,Inter3_1_DNA,Inter3_1_RNA)
-    ASEinfo <- getASEinfo(Inter5_1_SampleData,Inter3_1_RNA,rounds,cutoffNominal,cutoffAdjusted)
+  Inter5_1_SampleData <- getPvalues(sampleData,Inter5_1_DNA,Inter5_1_RNA)
+  ASEinfo <- rbind(ASEinfo, getASEinfo(Inter5_1_SampleData,Inter5_1_RNA,rounds,cutoffNominal,cutoffAdjusted))
     
   Intra6_3_DNA <- c("Intra6.3")
   Intra6_3_RNA <-c("Intra6_3_F","Intra6_3_L")
-    Inter6_3_SampleData <- getPvalues(sampleData,Inter3_1_DNA,Inter3_1_RNA)
-    ASEinfo <- getASEinfo(Inter6_3_SampleData,Inter3_1_RNA,rounds,cutoffNominal,cutoffAdjusted)
+  Intra6_3_SampleData <- getPvalues(sampleData,Intra6_3_DNA,Intra6_3_RNA)
+  ASEinfo <- rbind(ASEinfo, getASEinfo(Intra6_3_SampleData,Intra6_3_RNA,rounds,cutoffNominal,cutoffAdjusted))
     
   Intra7_2_DNA <- c("Intra7.2")
   Intra7_2_RNA <-c("Intra7_2_1_F","Intra7_2_1_L","Intra7_2_2_F","Intra7_2_2_L","Intra7_2_3_F","Intra7_2_3_L")
-  Inter7_2_SampleData <- getPvalues(sampleData,Inter3_1_DNA,Inter3_1_RNA)
-  ASEinfo <- getASEinfo(Inter7_2_SampleData,Inter3_1_RNA,rounds,cutoffNominal,cutoffAdjusted)
+  Intra7_2_SampleData <- getPvalues(sampleData,Intra7_2_DNA,Intra7_2_RNA)
+  ASEinfo <- rbind(ASEinfo, getASEinfo(Intra7_2_SampleData,Intra7_2_RNA,rounds,cutoffNominal,cutoffAdjusted))
     
   Intra8_2_DNA <- c("Intra8.2")
   Intra8_2_RNA <-c("Intra8_2_1_F","Intra8_2_1_L")
-  Inter8_2_SampleData <- getPvalues(sampleData,Inter3_1_DNA,Inter3_1_RNA)
-  ASEinfo <- getASEinfo(Inter8_2_SampleData,Inter3_1_RNA,rounds,cutoffNominal,cutoffAdjusted)
+  Intra8_2_SampleData <- getPvalues(sampleData,Intra8_2_DNA,Intra8_2_RNA)
+  ASEinfo <- rbind(ASEinfo, getASEinfo(Intra8_2_SampleData,Intra8_2_RNA,rounds,cutoffNominal,cutoffAdjusted))
     
 	#Under development
 	printPvalues(DataSetInterHeteroAbundantBOTHwithPvalue,RNAInterSamples,DNAInterSamples,"test.pdf")	
