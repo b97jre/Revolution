@@ -4,21 +4,26 @@
 ###############################################################################
 
 
-main <-function(fileName="Unified.output.raw.snps.indels.Final.not_centromere.Crubella_183_only_exons_unique.heterozygous.homozygous.vcf.Sample.vcf.Rfriendly", dataDir=".",
-                annotationFile=""){
+main <-function(fileName="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygousRegions.Crubella_183_only_exons_unique.vcf.Sample.vcf.Rfriendly", dataDir=".",
+                annotationFile="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygousRegions.Crubella_183_only_exons_unique.vcf.Sample.Crubella_183_gene.VCFannotaion"){
              
   
-  file <- paste(dataDir,fileName,sep="/")
-  #load dataset  
-  sampleData <- read.table(file,header=TRUE,sep ="\t")
+    file <- paste(dataDir,fileName,sep="/")
+  
+    #load dataset  
+    sampleData <- read.table(file,header=TRUE,sep ="\t")
+    annotationData <- read.table(annotationFile,header=FALSE,sep ="\t")
   
   # read in different samples
   DNAInterSamples <- c("Inter3.1","Inter4.1","Inter5.1")
   DNAIntraSamples <- c("Intra6.3","Intra7.2","Intra8.2")
   RNAInterSamples <- c("Inter3_1_1_F","Inter3_1_1_L","Inter4_1_1_F","Inter4_1_1_L","Inter4_1_2_F","Inter4_1_2_L","Inter4_1_3_F","Inter4_1_4_L","Inter5_1_1_F","Inter5_1_1_L")
-  RNAIntraSamples <- c("Intra6_3_1_F","Intra6_3_1_L","Intra7_2_1_F","Intra7_2_1_L","Intra7_2_2_F","Intra7_2_2_L","Intra7_2_3_F","Intra7_2_3_L","Intra8_2_1_F","Intra8_2_1_L")
+  RNAIntraSamples <- c("Intra6_1_F","Intra6_1_L","Intra7_2_1_F","Intra7_2_1_L","Intra7_2_2_F","Intra7_2_2_L","Intra7_2_3_F","Intra7_2_3_L","Intra8_2_1_F","Intra8_2_1_L")
   AllSamples <- c(DNAInterSamples,DNAIntraSamples,RNAInterSamples,RNAIntraSamples)
   
+    
+    
+    
 	# Different filters
 	# Only keep heterozygous samples
 	DataSetInterHetero <- filterCallData(sampleData, DNAInterSamples)  
