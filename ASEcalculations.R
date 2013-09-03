@@ -14,7 +14,9 @@ main <-function(fileName="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygous
   annotationFile <- paste(dataDir,annotation,sep="/")
   
   #load dataset  
+  print("Reading data file")
   sampleData <- read.table(file,header=TRUE,sep ="\t")
+  print("Reading annotation file")
   annotationData <- read.table(annotationFile,header=FALSE,sep ="\t")
   sampleData$annotation=annotationData$V3
   
@@ -27,6 +29,8 @@ main <-function(fileName="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygous
   
   
   # 
+  print("Checking for ASE")
+  
   ASEinfo = data.frame()
   Inter3_1_DNA <- c("Inter3.1")
   Inter3_1_RNA <-c("Inter3_1_1_F","Inter3_1_1_L")  
