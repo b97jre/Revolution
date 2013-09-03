@@ -152,13 +152,17 @@ plotCNVsandSNPandRepeatsDistribution2 <-function(CtrlFreecfile,SNPfile,stepSize,
     }
   }
 
-  pdf(pdfFileName)
+  pdf("CutoffSelectionDistribution.pdf")
   
-  par(mfrow=c(3,1), bty="l", cex=0.6)
+  par(mfrow=c(2,1), bty="l", cex=0.6)
   
+  hist(plotfile$repeatFraction,breaks=40, xlab="Fraction nucleotides annotated as repeats in 50 kb windows", main="Histogram of repeat distribution over chromosomes")
+  abline(v=0.2,col="blue")
   
-  hist(plotfile$repeatFraction,xlab="Fraction nucleotides annotated as repeats", main="Repeat distribution over chromosomes")
-
+  hist(plotfile$FractionHeterozygozity, breaks=40, xlab="Fraction nucleotides annotated as heterozygous compared to major allele homozygous in 50 kb windows", main="Histogram of hererozygous distribution over chromosomes")
+  abline(v=0.1,col="blue")
+  dev.off()
+  
   
   
   
@@ -184,49 +188,154 @@ write.table(repeatRegions, file = RepeatFileName, quote = FALSE, sep = "\t",row.
 
 
   
+  for(j in ())
     
-    par(mar=c(5,4,4,4))
-    #uncomment next line for individual plots
-    plot(plotfile$Start[tt],plotfile$Diploid[tt],type='l',ylim = c(0,3*ploidy) ,pch = 20,col = colors()[88],xlab = paste ("position, chr",i),ylab="")
-    mtext("Diploid",side=2,line=2,col=1,cex=0.5)
-    mtext("Homozygous regions",side=4,line=2,col=4,cex=0.5)
-    #comment next line for individual plots
-    #points(plotfile$Start[tt],plotfile$Ratio[tt]*ploidy,pch = 20,col = colors()[88])
-    par(new=T)
-    
-    
-    temp = subset(SNPs.common,chr==paste("scaffold_",i,sep=""))
-    heteroHist <- hist(temp$position[temp$Call=="0/1"],breaks=breakPoints,plot=FALSE)
-    majorHist <- hist(temp$position[temp$Call=="0/0"],breaks=breakPoints,plot=FALSE)
-    minorHist <- hist(temp$position[temp$Call=="1/1"],breaks=breakPoints,plot=FALSE)
-    
-    plotfile$homozygot[tt] = heteroHist$counts/majorHist$counts<0.1 
+  pdf("kept_for_analysis_scaffold_1_to_2 distribution.pdf",paper="a4r")
+  ploidy=2
+  
+  
+  par(mfrow=c(4,2), bty="l", cex=0.6)
+  
+  for (i in (1:2)) {
+    tt <- which(plotfile$Chromosome==paste("scaffold_",i,sep=""))
+    if (length(tt)>0) {
+      par(mar=c(5,4,4,4))
+      #uncomment next line for individual plots
+      plot(plotfile$Start[tt],plotfile$keptForAnalysis[tt],pch = 20,col = colors()[88],xlab = paste ("position, chr",i),ylab="", type='l')
+      mtext("Kept for analysis (Total)",side=2,line=2,col=1,cex=0.5)
+    }
   }
-    
-    plotfile$keptForAnalysis=
-    
-    ##plotting reads 
-    ymax = max(c(HeterozygousDensity$y,HomozygousMinorDensity$y,AllDensity$y))
-    plot(HeterozygousDensity,axes=FALSE,,xlab="",ylab="",ylim=c(0,ymax),pch=2,col=4,main="")
-    axis(4,col=4,col.lab=4,col.axis = 4)
-    lines(HomozygousMinorDensity,pch=2,col=2)
-    lines(AllDensity,pch=4)
+  for (i in (1:2)) {
+    tt <- which(plotfile$Chromosome==paste("scaffold_",i,sep=""))
+    if (length(tt)>0) {
+      par(mar=c(5,4,4,4))
+      #uncomment next line for individual plots
+      plot(plotfile$Start[tt],plotfile$Diploid[tt],pch = 20,xlab="",,ylab="", type='l')
+      par(new=T)
+      plot(plotfile$Start[tt],plotfile$CopyNumber[tt],pch = 20,col = colors()[99],axes=FALSE,xlab = paste ("position, chr",i),ylab="", type='l')
+      axis(4,col=4,col.lab=4,col.axis = colors()[99])
+      
+      mtext("Copy number (CTRLfreec)",side=4,line=2,col=colors()[99],cex=0.5)
+      mtext("Kept for analysis",side=2,line=2,col=1,cex=0.5)
+    }
   }
-}
-par(mar=c(0,0,0,0))
-plot(0,xaxt='n',yaxt='n',bty='n',pch='',ylab='',xlab='',type="p")  
-plot_colors <- c(colors()[88], colors()[136],colors()[461])
-
-legend(x = "top",inset = 0,
-       legend = c("2 alleles", "1 allele", ">2 alleles"),pch=20, 
-       col=plot_colors,  cex=1.5)
-
-plot(1, type = "l", axes=FALSE, xlab="", ylab="")
-plot_colors <- c(4,2, 1)
-legend(x = "top",inset = 0,
-       legend = c("Heterozygous", "Minor Homozygous", "All"), 
-       col=plot_colors, lwd=2, cex=1.5)
-dev.off()
+  
+  for (i in (1:2)) {
+    tt <- which(plotfile$Chromosome==paste("scaffold_",i,sep=""))
+    if (length(tt)>0) {
+      par(mar=c(5,4,4,4))
+      #uncomment next line for individual plots
+      plot(plotfile$Start[tt],plotfile$lowRepeat[tt],pch = 20,xlab="",,ylab="", type='l')
+      par(new=T)
+      plot(plotfile$Start[tt],plotfile$repeatFraction[tt],pch = 20,col = colors()[99],axes=FALSE,xlab = paste ("position, chr",i),ylab="", type='l')
+      axis(4,col=4,col.lab=4,col.axis = colors()[99])
+      mtext("Fraction repeat(repeatMasker)",side=4,line=2,col= colors()[99],cex=0.5)
+      mtext("Kept for analysis",side=2,line=2,col=1,cex=0.5)
+    }
+  }
+  
+  for (i in (1:2)) {
+    tt <- which(plotfile$Chromosome==paste("scaffold_",i,sep=""))
+    if (length(tt)>0) {
+      par(mar=c(5,4,4,4))
+      plot(plotfile$Start[tt],plotfile$homozygot[tt],pch = 20,xlab="",,ylab="", type='l')
+      par(new=T)
+      plot(plotfile$Start[tt],plotfile$FractionHeterozygozity[tt],pch = 20,col = colors()[99],axes=FALSE,xlab = paste ("position, chr",i),ylab="", type='l')
+      axis(4,col=4,col.lab=4,col.axis = colors()[99])
+      mtext("Fraction heterozygout SNPs (GATK)",side=4,line=2,col= colors()[99],cex=0.5)
+      mtext("Kept for analysis",side=2,line=2,col=1,cex=0.5)
+    }
+  }
+  dev.off()
+ 
+  pdf("kept_for_analysis_scaffold_5_to_8 distribution.pdf")
+  ploidy=2
+  
+  
+  par(mfrow=c(4,4), bty="l", cex=0.6)
+  
+  for (i in (5:8)) {
+    tt <- which(plotfile$Chromosome==paste("scaffold_",i,sep=""))
+    if (length(tt)>0) {
+      par(mar=c(5,4,4,4))
+      #uncomment next line for individual plots
+      plot(plotfile$Start[tt],plotfile$keptForAnalysis[tt],pch = 20,col = colors()[88],xlab = paste ("position, chr",i),ylab="", type='l')
+      mtext("Kept for analysis (Total)",side=2,line=2,col=1,cex=0.5)
+    }
+  }
+  for (i in (5:8)) {
+    tt <- which(plotfile$Chromosome==paste("scaffold_",i,sep=""))
+    if (length(tt)>0) {
+      par(mar=c(5,4,4,4))
+      #uncomment next line for individual plots
+      plot(plotfile$Start[tt],plotfile$Diploid[tt],pch = 20,xlab="",,ylab="", type='l')
+      par(new=T)
+      plot(plotfile$Start[tt],plotfile$CopyNumber[tt],pch = 20,col = colors()[99],axes=FALSE,xlab = paste ("position, chr",i),ylab="", type='l')
+      axis(4,col=4,col.lab=4,col.axis = colors()[99])
+      
+      mtext("Copy number (CTRLfreec)",side=4,line=2,col=colors()[99],cex=0.5)
+      mtext("Kept for analysis",side=2,line=2,col=1,cex=0.5)
+    }
+  }
+  
+  for (i in (5:8)) {
+    tt <- which(plotfile$Chromosome==paste("scaffold_",i,sep=""))
+    if (length(tt)>0) {
+      par(mar=c(5,4,4,4))
+      #uncomment next line for individual plots
+      plot(plotfile$Start[tt],plotfile$lowRepeat[tt],pch = 20,xlab="",,ylab="", type='l')
+      par(new=T)
+      plot(plotfile$Start[tt],plotfile$repeatFraction[tt],pch = 20,col = colors()[99],axes=FALSE,xlab = paste ("position, chr",i),ylab="", type='l')
+      axis(4,col=4,col.lab=4,col.axis = colors()[99])
+      mtext("Fraction repeat(repeatMasker)",side=4,line=2,col= colors()[99],cex=0.5)
+      mtext("Kept for analysis",side=2,line=2,col=1,cex=0.5)
+    }
+  }
+  
+  for (i in (5:8)) {
+    tt <- which(plotfile$Chromosome==paste("scaffold_",i,sep=""))
+    if (length(tt)>0) {
+      par(mar=c(5,4,4,4))
+      plot(plotfile$Start[tt],plotfile$homozygot[tt],pch = 20,xlab="",,ylab="", type='l')
+      par(new=T)
+      plot(plotfile$Start[tt],plotfile$FractionHeterozygozity[tt],pch = 20,col = colors()[99],axes=FALSE,xlab = paste ("position, chr",i),ylab="", type='l')
+      axis(4,col=4,col.lab=4,col.axis = colors()[99])
+      mtext("Fraction heterozygout SNPs (GATK)",side=4,line=2,col= colors()[99],cex=0.5)
+      mtext("Kept for analysis",side=2,line=2,col=1,cex=0.5)
+    }
+  }
+  dev.off()
+  
+  #comment next line for individual plots
+      #points(plotfile$Start[tt],plotfile$Ratio[tt]*ploidy,pch = 20,col = colors()[88])
+      tt <- which(plotfile$Chromosome==paste("scaffold_",i,sep="")  & plotfile$CopyNumber>ploidy )
+      points(plotfile$Start[tt],plotfile$Ratio[tt]*ploidy,pch = 20,col = colors()[136])
+      tt <- which(plotfile$Chromosome==paste("scaffold_",i,sep="")  & plotfile$CopyNumber<ploidy )
+      points(plotfile$Start[tt],plotfile$Ratio[tt]*ploidy,pch = 20,col = colors()[461])
+      tt <- which(plotfile$Chromosome==paste("scaffold_",i,sep=""))
+      #points(plotfile$Start[tt],plotfile$CopyNumber[tt], pch =20, col = colors()[24])
+      cen <- centromeric[centromeric$Chromosome==i,]
+      abline(v=cen$Centromere.start,col="blue")
+      abline(v=cen$Centromere.end, col="blue")
+      # add new plot in same window
+      par(new=T)
+      #getting distribution of heterozygous calls 
+      HeterozygousDensity <- density(temp$position[temp$Call=="0/1"],bw=50000)
+      #getting distribution of minor homozygous calls calls 
+      HomozygousMinorDensity <- density(temp$position[temp$Call=="1/1"],bw=50000)
+      
+      #getting distribution of all SNPs 
+      AllDensity <-density(temp$position,bw=50000)
+      
+      ##plotting reads 
+      ymax = max(c(HeterozygousDensity$y,HomozygousMinorDensity$y,AllDensity$y))
+      plot(HeterozygousDensity,axes=FALSE,,xlab="",ylab="",ylim=c(0,ymax),pch=2,col=4,main="")
+      axis(4,col=4,col.lab=4,col.axis = 4)
+      lines(HomozygousMinorDensity,pch=2,col=2)
+      lines(AllDensity,pch=4)
+    }
+  }
+  dev.off()
 }
 
 
