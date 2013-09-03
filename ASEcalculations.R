@@ -1,11 +1,12 @@
 # TODO: Add comment
 # 
 # Author: johanreimegard
+
 ###############################################################################
 
 
-main <-function(fileName="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygousRegions.Crubella_183_only_exons_unique.vcf.Sample.vcf.Rfriendly", dataDir=".",
-                annotationFile="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygousRegions.Crubella_183_only_exons_unique.vcf.Sample.Crubella_183_gene.VCFannotaion"){
+main <-function(fileName="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygousRegions.Crubella_183_only_exons_unique.vcf.Sample.vcf.Rfriendly", dataDir="/gulo/proj_nobackup/b2012122/private/ASE",
+                annotation="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygousRegions.Crubella_183_only_exons_unique.vcf.Sample.Crubella_183_gene.VCFannotaion"){
              
   
     file <- paste(dataDir,fileName,sep="/")
@@ -13,39 +14,77 @@ main <-function(fileName="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygous
     #load dataset  
     sampleData <- read.table(file,header=TRUE,sep ="\t")
     annotationData <- read.table(annotationFile,header=FALSE,sep ="\t")
+    sampleData$annotation=annotationData$V3
   
   # read in different samples
   DNAInterSamples <- c("Inter3.1","Inter4.1","Inter5.1")
   DNAIntraSamples <- c("Intra6.3","Intra7.2","Intra8.2")
   RNAInterSamples <- c("Inter3_1_1_F","Inter3_1_1_L","Inter4_1_1_F","Inter4_1_1_L","Inter4_1_2_F","Inter4_1_2_L","Inter4_1_3_F","Inter4_1_4_L","Inter5_1_1_F","Inter5_1_1_L")
-  RNAIntraSamples <- c("Intra6_1_F","Intra6_1_L","Intra7_2_1_F","Intra7_2_1_L","Intra7_2_2_F","Intra7_2_2_L","Intra7_2_3_F","Intra7_2_3_L","Intra8_2_1_F","Intra8_2_1_L")
+  RNAIntraSamples <- c("Intra6_3_F","Intra6_3_L","Intra7_2_1_F","Intra7_2_1_L","Intra7_2_2_F","Intra7_2_2_L","Intra7_2_3_F","Intra7_2_3_L","Intra8_2_1_F","Intra8_2_1_L")
   AllSamples <- c(DNAInterSamples,DNAIntraSamples,RNAInterSamples,RNAIntraSamples)
   
+  rounds = 10
+  cutoffNominal=0.005 
+  cutoffAdjusted=0.1
     
+  Inter3_1_DNA <- c("Inter3.1")
+  Inter3_1_RNA <-c("Inter3_1_1_F","Inter3_1_1_L")  
+  Inter3_1_SampleData <- getPvalues(sampleData,Inter3_1_DNA,Inter3_1_RNA)
+  ASEinfo <- getASEinfo(Inter3_1_SampleData,Inter3_1_RNA,rounds,cutoffNominal,cutoffAdjusted)
     
+  Inter4_1_DNA <- c("Inter4.1")
+  Inter4_1_RNA <-c("Inter4_1_1_F","Inter4_1_1_L","Inter4_1_2_F","Inter4_1_2_L","Inter4_1_3_F","Inter4_1_3_L")  
+    Inter4_1_SampleData <- getPvalues(sampleData,Inter3_1_DNA,Inter3_1_RNA)
+    ASEinfo <- getASEinfo(Inter4_1_SampleData,Inter3_1_RNA,rounds,cutoffNominal,cutoffAdjusted)
     
-	# Different filters
-	# Only keep heterozygous samples
-	DataSetInterHetero <- filterCallData(sampleData, DNAInterSamples)  
-	# Only keep heterozygous samples with DNA total count above 30 in all heterozygous samples
-	DataSetInterHeteroAbundant <- filterTotalData(DataSetInterHetero, DNAInterSamples,c(30,200))  
-	# Only keep heterozygous samples with DNA total count above 40 in all heterozygous samples
-	DataSetInterHeteroAbundantBOTH <- filterTotalData(DataSetInterHeteroAbundant, RNAInterSamples,c(40,2000))  
-	
-	# Calculate pValues 
-	DataSetInterHeteroAbundantBOTHwithPvalue <- Pvaluescalculation(DataSetInterHeteroAbundantBOTH, RNAInterSamples,DNAInterSamples)  
-	
-  # Correct for multiple testing
-  DataSetInterHeteroAbundantBOTHwithPvalue<-as.data.frame(DataSetInterHeteroAbundantBOTHwithPvalue)
-  DataSetInterHeteroAbundantBOTHwithPvalueCorrected <- MultipleTestCorrection(DataSetInterHeteroAbundantBOTHwithPvalue,RNAInterSamples)
-	
-  DataSetInterHeteroAbundantBOTHwithPvalueCorrected <- AnnotateSNPs(DataSetInterHeteroAbundantBOTHwithPvalueCorrected,dataDir, annotationFile)
-  
-	
+  Inter5_1_DNA <- c("Inter5.1")
+  Inter5_1_RNA <-c("Inter5_1_1_F","Inter5_1_1_L")  
+    Inter5_1_SampleData <- getPvalues(sampleData,Inter3_1_DNA,Inter3_1_RNA)
+    ASEinfo <- getASEinfo(Inter5_1_SampleData,Inter3_1_RNA,rounds,cutoffNominal,cutoffAdjusted)
+    
+  Intra6_3_DNA <- c("Intra6.3")
+  Intra6_3_RNA <-c("Intra6_3_F","Intra6_3_L")
+    Inter6_3_SampleData <- getPvalues(sampleData,Inter3_1_DNA,Inter3_1_RNA)
+    ASEinfo <- getASEinfo(Inter6_3_SampleData,Inter3_1_RNA,rounds,cutoffNominal,cutoffAdjusted)
+    
+  Intra7_2_DNA <- c("Intra7.2")
+  Intra7_2_RNA <-c("Intra7_2_1_F","Intra7_2_1_L","Intra7_2_2_F","Intra7_2_2_L","Intra7_2_3_F","Intra7_2_3_L")
+  Inter7_2_SampleData <- getPvalues(sampleData,Inter3_1_DNA,Inter3_1_RNA)
+  ASEinfo <- getASEinfo(Inter7_2_SampleData,Inter3_1_RNA,rounds,cutoffNominal,cutoffAdjusted)
+    
+  Intra8_2_DNA <- c("Intra8.2")
+  Intra8_2_RNA <-c("Intra8_2_1_F","Intra8_2_1_L")
+  Inter8_2_SampleData <- getPvalues(sampleData,Inter3_1_DNA,Inter3_1_RNA)
+  ASEinfo <- getASEinfo(Inter8_2_SampleData,Inter3_1_RNA,rounds,cutoffNominal,cutoffAdjusted)
+    
 	#Under development
 	printPvalues(DataSetInterHeteroAbundantBOTHwithPvalue,RNAInterSamples,DNAInterSamples,"test.pdf")	
 	
 }
+
+
+getPvalues <- function(sampleData,DNAsamples,RNAsamples, RNAlow=40, RNAhigh=2000,DNAlow=30,DNAhigh=200){
+  
+  # Different filters
+  # Only keep heterozygous DNAsamples
+  DataSetFiltered <- filterCallData(sampleData, DNAsamples)  
+  # Only keep heterozygous samples with DNA total count above 30 in all heterozygous samples
+  DataSetFilteredAbundant <- filterTotalData(DataSetFiltered, DNAsamples,c(DNAlow,DNAhigh))  
+  # Only keep heterozygous samples with DNA total count above 40 in all heterozygous samples
+  DataSetFilteredAbundantBOTH <- filterTotalData(DataSetFilteredAbundant, RNAsamples,c(RNAlow,RNAhigh))  
+  
+  # Calculate pValues 
+  DataSetFilteredAbundantBOTHwithPvalue <- Pvaluescalculation(DataSetFilteredAbundantBOTH, RNAsamples,DNAsamples)  
+  
+  # Correct for multiple testing
+  DataSetFilteredAbundantBOTHwithPvalue<-as.data.frame(DataSetFilteredAbundantBOTHwithPvalue)
+  DataSetInterHeteroAbundantBOTHwithPvalueCorrected <- MultipleTestCorrection(DataSetFilteredAbundantBOTHwithPvalue,RNAsamples)
+
+  
+  return(DataSetInterHeteroAbundantBOTHwithPvalueCorrected)
+  
+}
+
 
 
 
@@ -153,14 +192,68 @@ BinTest <- function(x, count1RNA, TotalRNA,count1DNA,TotalDNA){
 }
 
 
-random <- function(x){
-  #check length of array
-  s = length(x)
-  #randomly pick a number between 1 and length of array
-  pointer = floor(s*runif(1, min = 0, max = 1))+1
-  # check the exception if the random value became exactly 1 then reduce pointer by one
-  if(pointer > s){pointer=s}
-  # return the randomly picked value from array	  
-  return (x[pointer])
+getASEinfo <- function(Dataset,RNAsamples,rounds=10,cutoffNominal=0.005, cutoffAdjusted=0.1){
+  info = data.frame()
+  for(i in (1:rounds)){
+    DatasetOneSNPperGene <- getOneSNPperGene(Dataset) 
+    rowInfo <- getASEinformation(DatasetOneSNPperGene,RNAsamples,cutoffNominal, cutoffAdjusted,i)
+    info <- rbind(info,rowInfo)
+  }  
+  return (info)
 }
 
+getASEinformation <- function(DatasetOneSNPperGene,RNAsamples,cutoffNominal=0.005, cutoffAdjusted=0.1,round=1){
+  info = data.frame()
+  for(i in (1:length(RNAsamples))){
+    columnName  <- paste(RNAsamples[i],"pValue",sep="_")
+    Data <- DatasetOneSNPperGene[,columnName]
+    nrOfGenes <- length (Data)
+    Nominal <- Data[which(Data<cutoffNominal)]
+    nrOfASEnominal <- length (Nominal)
+  
+  
+    columnName  <- paste(RNAsamples[i],"pValueCorrected",sep="_")
+    Data <- DatasetOneSNPperGene[,columnName]
+    Adjusted <- Data[which(Data<cutoffAdjusted)]
+    nrOfASEAdjusted <- length (Adjusted)
+  
+    rowinfo <- data.frame("Name"=RNAsamples[i],"NrOfGenes"=nrOfGenes,"NominalpValue"=cutoffNominal,"Nominal_Significant"=nrOfASEnominal,"Adjusted_Pvalue"=cutoffAdjusted,"Adjusted_count"=nrOfASEAdjusted)
+    info <- rbind(info,rowinfo)
+    
+  }
+  return (info)
+}
+
+getASEinformationAdjusted(Dataset,RNAsample,cutoff){
+  Inter3_1_1_F_pValueCorrected
+}
+
+getOneSNPperGene <- function(Dataset,classifier="annotation", cutoff = 0.05){
+  Dataset$duplicated <- duplicated.random(as.vector(Dataset[,classifier]))
+  DataSetOneSNPperGene <- subset(Dataset, duplicated == FALSE)  
+  return (DataSetOneSNPperGene)
+}
+
+duplicated.random <- function(x, incomparables = FALSE, ...){
+    if ( is.vector(x) )
+    {
+      permutation = sample(length(x))
+      x.perm      = x[permutation]
+      result.perm = duplicated(x.perm, incomparables, ...)
+      result      = result.perm[order(permutation)]
+      return(result)
+    }
+    else if ( is.matrix(x) )
+    {
+      permutation = sample(nrow(x))
+      x.perm      = x[permutation,]
+      result.perm = duplicated(x.perm, incomparables, ...)
+      result      = result.perm[order(permutation)]
+      return(result)
+    }
+    else
+    {
+      stop(paste("duplicated.random() only supports vectors",
+                 "matrices for now."))
+    }
+  }
