@@ -35,6 +35,7 @@ main <-function(fileName="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygous
   Inter3_1_DNA <- c("Inter3.1")
   Inter3_1_RNA <-c("Inter3_1_1_F","Inter3_1_1_L")  
   Inter3_1_SampleData <- getPvalues(sampleData,Inter3_1_DNA,Inter3_1_RNA)
+  print(Inter3_1_SampleData$Inter3.1_Count1,Inter3_1_SampleData$Inter3.1_Count2)
   ASEinfo <- rbind(ASEinfo, getASEinfo(Inter3_1_SampleData,Inter3_1_RNA,rounds,cutoffNominal,cutoffAdjusted))
   
   Inter4_1_DNA <- c("Inter4.1")
@@ -53,8 +54,25 @@ main <-function(fileName="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygous
   ASEinfo <- rbind(ASEinfo, getASEinfo(Intra6_3_SampleData,Intra6_3_RNA,rounds,cutoffNominal,cutoffAdjusted))
   
   Intra7_2_DNA <- c("Intra7.2")
-  Intra7_2_RNA <-c("Intra7_2_1_F","Intra7_2_1_L","Intra7_2_2_F","Intra7_2_2_L","Intra7_2_3_F","Intra7_2_3_L")
-  Intra7_2_SampleData <- getPvalues(sampleData,Intra7_2_DNA,Intra7_2_RNA)
+  Intra7_2_RNA_Flower <-c("Intra7_2_1_F","Intra7_2_2_F","Intra7_2_3_F")
+  Intra7_2_RNA_Leafs <-c("Intra7_2_1_L","Intra7_2_2_L","Intra7_2_3_L")
+  
+  Intra7_2_SampleDataFlower1 <- getPvalues(sampleData,Intra7_2_DNA,Intra7_2_RNA_Flower[1])
+  Intra7_2_SampleDataFlower2 <- getPvalues(sampleData,Intra7_2_DNA,Intra7_2_RNA_Flower[2])
+  Intra7_2_SampleDataFlower3 <- getPvalues(sampleData,Intra7_2_DNA,Intra7_2_RNA_Flower[3])
+  
+  Intra7_2_SampleDataLeafs1 <- getPvalues(sampleData,Intra7_2_DNA,Intra7_2_RNA_Leafs[1])
+  Intra7_2_SampleDataLeafs2 <- getPvalues(sampleData,Intra7_2_DNA,Intra7_2_RNA_Leafs[2])
+  Intra7_2_SampleDataLeafs3 <- getPvalues(sampleData,Intra7_2_DNA,Intra7_2_RNA_Leafs[3])
+
+  Intra7_2_SampleDataFlowers <- getPvalues(sampleData,Intra7_2_DNA,Intra7_2_RNA_Flower)
+  UnionGenes <- getASEgenes(Intra7_2_SampleDataFlowers,Intra7_2_RNA_Flower,cutoffAdjusted=0.005)
+
+  Intra7_2_SampleDataFlowers <- getASE()
+  Intra7_2_SampleDataLeafs <- getPvalues(sampleData,Intra7_2_DNA,Intra7_2_RNA_Leafs)
+  
+  
+  
   ASEinfo <- rbind(ASEinfo, getASEinfo(Intra7_2_SampleData,Intra7_2_RNA,rounds,cutoffNominal,cutoffAdjusted))
   
   Intra8_2_DNA <- c("Intra8.2")
@@ -208,26 +226,63 @@ getASEinfo <- function(Dataset,RNAsamples,rounds=10,cutoffNominal=0.005, cutoffA
   return (info)
 }
 
+getASEgenes <- function(Dataset,RNAsamples,rounds=10,cutoffNominal=0.005, cutoffAdjusted=0.005){
+    DatasetOneSNPperGene <- getOneSNPperGene(Dataset) 
+    info=NULL
+    for(i in 1:length(RNAsamples)){
+      rowInfo <- getASEGenes(DatasetOneSNPperGene,RNAsamples[i],cutoffNominal, cutoffAdjusted,i)
+      info <- union(info,rowInfo)
+    }
+    return (info)
+}
+
+
+
 getASEinformation <- function(DatasetOneSNPperGene,RNAsamples,cutoffNominal=0.005, cutoffAdjusted=0.1,round=1){
   info = data.frame()
-  for(i in (1:length(RNAsamples))){
-    columnName  <- paste(RNAsamples[i],"pValue",sep="_")
-    Data <- DatasetOneSNPperGene[,columnName]
-    nrOfGenes <- length (Data)
-    Nominal <- Data[which(Data<cutoffNominal)]
-    nrOfASEnominal <- length (Nominal)
+  FlowerList = list()
+  LeafsList = list()
+  GeneIntersectList = list()
+  GeneFlowerList = list()
+  GeneLeafsList = list()
+  
+  for(i in seq(1,length(RNAsamples)-1)){
     
     
     columnName  <- paste(RNAsamples[i],"pValueCorrected",sep="_")
-    Data <- DatasetOneSNPperGene[,columnName]
-    Adjusted <- Data[which(Data<cutoffAdjusted)]
-    nrOfASEAdjusted <- length (Adjusted)
+    columnName2  <- paste(RNAsamples[i+1],"pValueCorrected",sep="_")
     
-    rowinfo <- data.frame("Name"=RNAsamples[i],"NrOfGenes"=nrOfGenes,"NominalpValue"=cutoffNominal,"Nominal_Significant"=nrOfASEnominal,"Adjusted_Pvalue"=cutoffAdjusted,"Adjusted_count"=nrOfASEAdjusted)
+    Flowers <- DatasetOneSNPperGene[which(DatasetOneSNPperGene[columnName] <cutoffAdjusted),]
+    
+    FlowerList <- c(FlowerList,RNAsamples[i]=Flowers$annotation)
+    Leafs <- DatasetOneSNPperGene[which(DatasetOneSNPperGene[columnName2] <cutoffAdjusted),]
+    LeavesList(RNAsamples[i])=Leafs$annotation
+    nrOfASEAdjustedFlowers <- length (Flowers[[1]])
+    nrOfASEAdjustedLeafs <- length (Leafs[[1]])
+    GeneIntersect <- intersect(Flowers$annotation,Leafs$annotation)
+  IntersectList(RNAsamples[i])=
+    GeneFlower <- setdiff(Flowers$annotation,Leafs$annotation)
+    GeneLeafs <- setdiff(Leafs$annotation,Flowers$annotation)
+    nrOfASEAdjustedFlowersAndLeaves <- length (GeneIntersect)
+    nrOfASEAdjustedFlowersOnly <- length (GeneFlower)
+    nrOfASEAdjustedLeafsOnly <- length (GeneLeafs)
+    
+    
+    rowinfo <- data.frame("Name"=RNAsamples[i],"NrOfGenes"=nrOfGenes,"Adjusted_Pvalue"=cutoffAdjusted,"Adjusted_count"=nrOfASEAdjusted)
     info <- rbind(info,rowinfo)
     
   }
   return (info)
+}
+
+getASEGenes <- function(DatasetOneSNPperGene,RNAsample,cutoffNominal=0.005, cutoffAdjusted=0.1,round=1){
+    
+    
+    columnName  <- paste(RNAsample,"pValueCorrected",sep="_")
+    
+    Flowers <- DatasetOneSNPperGene[which(DatasetOneSNPperGene[columnName] <cutoffAdjusted),]
+    
+    return(Flowers$annotation)
 }
 
 getOneSNPperGene <- function(Dataset,classifier="annotation", cutoff = 0.05){
