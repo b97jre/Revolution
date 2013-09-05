@@ -76,7 +76,7 @@ main <-function(fileName="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygous
   Intra7_2_SampleDataLeafs <- getPvalues(sampleData,Intra7_2_DNA,Intra7_2_RNA_Leafs)
   nrOfheterozygousGenesExpressedInIntraLeafs = length(unique(Intra7_2_SampleDataLeafs$annotation))
   UnionGenesLeafs <- getASEgenesUnion(Intra7_2_SampleDataLeafs,Intra7_2_RNA_Leafs,cutoffAdjusted=0.005)
-  IntersectGenesFlowers <- getASEgenesIntersect(Intra7_2_SampleDataLeafs,Intra7_2_RNA_Leafs,cutoffAdjusted=0.005)
+  IntersectGenesLeafs <- getASEgenesIntersect(Intra7_2_SampleDataLeafs,Intra7_2_RNA_Leafs,cutoffAdjusted=0.005)
   
   
   
@@ -281,7 +281,11 @@ getASEgenesIntersect <- function(Dataset,RNAsamples,rounds=10,cutoffNominal=0.00
   info=NULL
   for(i in 1:length(RNAsamples)){
     rowInfo <- getASEGenes(DatasetOneSNPperGene,RNAsamples[i],cutoffNominal, cutoffAdjusted,i)
-    info <- intersect(info,rowInfo)
+    if(i ==1 ){
+      info=rowInfo
+    }else{
+      info <- intersect(info,rowInfo)
+    }
   }
   return (info)
 }
