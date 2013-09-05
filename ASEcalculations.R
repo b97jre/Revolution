@@ -69,10 +69,14 @@ main <-function(fileName="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygous
   #
   Intra7_2_SampleDataFlowers <- getPvalues(sampleData,Intra7_2_DNA,Intra7_2_RNA_Flower)
   nrOfheterozygousGenesExpressedInIntraFlowers = length(unique(Intra7_2_SampleDataFlowers$annotation))
-  UnionGenes <- getASEgenes(Intra7_2_SampleDataFlowers,Intra7_2_RNA_Flower,cutoffAdjusted=0.005)
+  UnionGenesFlowers <- getASEgenesUnion(Intra7_2_SampleDataFlowers,Intra7_2_RNA_Flower,cutoffAdjusted=0.005)
+  IntersectGenesFlowers <- getASEgenesIntersect(Intra7_2_SampleDataFlowers,Intra7_2_RNA_Flower,cutoffAdjusted=0.005)
   
-  Intra7_2_SampleDataFlowers <- getASE()
+  
   Intra7_2_SampleDataLeafs <- getPvalues(sampleData,Intra7_2_DNA,Intra7_2_RNA_Leafs)
+  nrOfheterozygousGenesExpressedInIntraLeafs = length(unique(Intra7_2_SampleDataLeafs$annotation))
+  UnionGenesLeafs <- getASEgenesUnion(Intra7_2_SampleDataLeafs,Intra7_2_RNA_Leafs,cutoffAdjusted=0.005)
+  IntersectGenesFlowers <- getASEgenesIntersect(Intra7_2_SampleDataLeafs,Intra7_2_RNA_Leafs,cutoffAdjusted=0.005)
   
   
   
@@ -229,15 +233,6 @@ getASEinfo <- function(Dataset,RNAsamples,rounds=10,cutoffNominal=0.005, cutoffA
   return (info)
 }
 
-getASEgenes <- function(Dataset,RNAsamples,rounds=10,cutoffNominal=0.005, cutoffAdjusted=0.005){
-  DatasetOneSNPperGene <- getOneSNPperGene(Dataset) 
-  info=NULL
-  for(i in 1:length(RNAsamples)){
-    rowInfo <- getASEGenes(DatasetOneSNPperGene,RNAsamples[i],cutoffNominal, cutoffAdjusted,i)
-    info <- union(info,rowInfo)
-  }
-  return (info)
-}
 
 
 
@@ -270,6 +265,27 @@ getASEinformation <- function(DatasetOneSNPperGene,RNAsamples,cutoffNominal=0.00
   }
   return (info)
 }
+
+getASEgenesUnion <- function(Dataset,RNAsamples,rounds=10,cutoffNominal=0.005, cutoffAdjusted=0.005){
+  DatasetOneSNPperGene <- getOneSNPperGene(Dataset) 
+  info=NULL
+  for(i in 1:length(RNAsamples)){
+    rowInfo <- getASEGenes(DatasetOneSNPperGene,RNAsamples[i],cutoffNominal, cutoffAdjusted,i)
+    info <- union(info,rowInfo)
+  }
+  return (info)
+}
+
+getASEgenesIntersect <- function(Dataset,RNAsamples,rounds=10,cutoffNominal=0.005, cutoffAdjusted=0.005){
+  DatasetOneSNPperGene <- getOneSNPperGene(Dataset) 
+  info=NULL
+  for(i in 1:length(RNAsamples)){
+    rowInfo <- getASEGenes(DatasetOneSNPperGene,RNAsamples[i],cutoffNominal, cutoffAdjusted,i)
+    info <- intersect(info,rowInfo)
+  }
+  return (info)
+}
+
 
 getASEGenes <- function(DatasetOneSNPperGene,RNAsample,cutoffNominal=0.005, cutoffAdjusted=0.1,round=1){
   
