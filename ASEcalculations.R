@@ -18,7 +18,7 @@ main <-function(fileName="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygous
   sampleData <- read.table(file,header=TRUE,sep ="\t")
   print("Reading annotation file")
   annotationData <- read.table(annotationFile,header=FALSE,sep ="\t")
-  q$annotation=annotationData$V3
+  sampleData$annotation=annotationData$V3
   
   
   # read in different samples
