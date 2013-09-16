@@ -18,7 +18,8 @@ main <-function(fileName="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygous
   sampleData <- read.table(file,header=TRUE,sep ="\t")
   print("Reading annotation file")
   annotationData <- read.table(annotationFile,header=FALSE,sep ="\t")
-  sampleData$annotation=annotationData$V3
+  q$annotation=annotationData$V3
+  
   
   # read in different samples
   DNAInterSamples <- c("Inter3.1","Inter4.1","Inter5.1")
@@ -26,6 +27,11 @@ main <-function(fileName="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygous
   RNAInterSamples <- c("Inter3_1_1_F","Inter3_1_1_L","Inter4_1_1_F","Inter4_1_1_L","Inter4_1_2_F","Inter4_1_2_L","Inter4_1_3_F","Inter4_1_4_L","Inter5_1_1_F","Inter5_1_1_L")
   RNAIntraSamples <- c("Intra6_3_F","Intra6_3_L","Intra7_2_1_F","Intra7_2_1_L","Intra7_2_2_F","Intra7_2_2_L","Intra7_2_3_F","Intra7_2_3_L","Intra8_2_1_F","Intra8_2_1_L")
   AllSamples <- c(DNAInterSamples,DNAIntraSamples,RNAInterSamples,RNAIntraSamples)
+  
+  
+  
+  
+  
   
   
   # 
@@ -40,6 +46,33 @@ main <-function(fileName="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygous
   
   Inter4_1_DNA <- c("Inter4.1")
   Inter4_1_RNA <-c("Inter4_1_1_F","Inter4_1_1_L","Inter4_1_2_F","Inter4_1_2_L","Inter4_1_3_F","Inter4_1_4_L")  
+  Inter4_1_RNA_Flower <-c("Inter4_1_1_F","Inter4_1_2_F","Inter4_1_3_F")
+  Inter4_1_RNA_Leafs <-c("Inter4_1_1_L","Inter4_1_2_L","Inter4_1_4_L")
+  
+  Inter4_1_SampleDataFlowers <- getPvalues(sampleData,Inter4_1_DNA,Inter4_1_RNA_Flower)
+  nrOfheterozygousGenesExpressedInIntraFlowers = length(unique(Inter4_1_SampleDataFlowers$annotation))
+  InterUnionGenesFlowers <- getASEgenesUnion(Inter4_1_SampleDataFlowers,Inter4_1_RNA_Flower,cutoffAdjusted=0.005)
+  InterIntersectGenesFlowers <- getASEgenesIntersect(Inter4_1_SampleDataFlowers,Inter4_1_RNA_Flower,cutoffAdjusted=0.005)
+  
+  
+  Inter4_1_SampleDataLeafs <- getPvalues(sampleData,Inter4_1_DNA,Inter4_1_RNA_Leafs)
+  nrOfheterozygousGenesExpressedInIntraLeafs = length(unique(Inter4_1_SampleDataLeafs$annotation))
+  InterUnionGenesLeafs <- getASEgenesUnion(Inter4_1_SampleDataLeafs,Inter4_1_RNA_Leafs,cutoffAdjusted=0.005)
+  InterIntersectGenesLeafs <- getASEgenesIntersect(Inter4_1_SampleDataLeafs,Inter4_1_RNA_Leafs,cutoffAdjusted=0.005)
+  
+  
+  
+  Both <- intersect(unique(Inter4_1_SampleDataFlowers$annotation),unique(Inter4_1_SampleDataLeafs$annotation))
+  FlowerUnique <- detDiff(unique(Inter4_1_SampleDataFlowers$annotation),Both)
+  nrOfheterozygousGenesExpressedInIntra = length(Both)
+  BothASEUnion = intersect(UnionGenesFlowers,UnionGenesLeafs)
+  BothASEIntersect = intersect(IntersectGenesFlowers,IntersectGenesLeafs)
+  
+  
+  
+  
+  
+  
   Inter4_1_SampleData <- getPvalues(sampleData,Inter4_1_DNA,Inter4_1_RNA)
   ASEinfo <- rbind(ASEinfo, getASEinfo(Inter4_1_SampleData,Inter4_1_RNA,rounds,cutoffNominal,cutoffAdjusted))
   
@@ -69,15 +102,51 @@ main <-function(fileName="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygous
   #
   Intra7_2_SampleDataFlowers <- getPvalues(sampleData,Intra7_2_DNA,Intra7_2_RNA_Flower)
   nrOfheterozygousGenesExpressedInIntraFlowers = length(unique(Intra7_2_SampleDataFlowers$annotation))
-  UnionGenesFlowers <- getASEgenesUnion(Intra7_2_SampleDataFlowers,Intra7_2_RNA_Flower,cutoffAdjusted=0.005)
-  IntersectGenesFlowers <- getASEgenesIntersect(Intra7_2_SampleDataFlowers,Intra7_2_RNA_Flower,cutoffAdjusted=0.005)
+  IntraUnionGenesFlowers <- getASEgenesUnion(Intra7_2_SampleDataFlowers,Intra7_2_RNA_Flower,cutoffAdjusted=0.005)
+  IntraIntersectGenesFlowers <- getASEgenesIntersect(Intra7_2_SampleDataFlowers,Intra7_2_RNA_Flower,cutoffAdjusted=0.005)
   
   
   Intra7_2_SampleDataLeafs <- getPvalues(sampleData,Intra7_2_DNA,Intra7_2_RNA_Leafs)
   nrOfheterozygousGenesExpressedInIntraLeafs = length(unique(Intra7_2_SampleDataLeafs$annotation))
-  UnionGenesLeafs <- getASEgenesUnion(Intra7_2_SampleDataLeafs,Intra7_2_RNA_Leafs,cutoffAdjusted=0.005)
-  IntersectGenesLeafs <- getASEgenesIntersect(Intra7_2_SampleDataLeafs,Intra7_2_RNA_Leafs,cutoffAdjusted=0.005)
+  IntraUnionGenesLeafs <- getASEgenesUnion(Intra7_2_SampleDataLeafs,Intra7_2_RNA_Leafs,cutoffAdjusted=0.005)
+  IntraIntersectGenesLeafs <- getASEgenesIntersect(Intra7_2_SampleDataLeafs,Intra7_2_RNA_Leafs,cutoffAdjusted=0.005)
   
+  Both <- intersect(unique(Intra7_2_SampleDataFlowers$annotation),unique(Intra7_2_SampleDataLeafs$annotation))
+  nrOfheterozygousGenesExpressedInIntra = length(Both)
+  BothASEUnion = intersect(UnionGenesFlowers,UnionGenesLeafs)
+  BothASEIntersect = intersect(IntersectGenesFlowers,IntersectGenesLeafs)
+
+  InterUnionGenesFlowers
+  InterUnionGenesLeafs
+  IntraUnionGenesFlowers
+  IntraUnionGenesLeafs
+  
+  genes <- unique(sampleData$annotation)
+  InterFlowersGenes = unique(Inter4_1_SampleDataFlowers$annotation)
+  InterLeavesGenes = unique(Inter4_1_SampleDataLeafs$annotation)
+  IntraFlowersGenes = unique(Intra7_2_SampleDataFlowers$annotation)
+  IntraLeafsGenes = unique(Intra7_2_SampleDataLeafs$annotation)
+  
+  InterFlowersGenesIndex = match(InterFlowersGenes,genes)
+  InterLeavesGenesIndex  = match(InterLeavesGenes,genes)
+  IntraFlowersGenesIndex  = match(IntraFlowersGenes,genes)
+  IntraLeafsGenesIndex  = match(IntraLeafsGenes,genes)
+
+  
+  
+  
+  length(setdiff(InterUnionGenesFlowers,InterUnionGenesLeafs))
+  length(setdiff(InterUnionGenesLeafs,InterUnionGenesFlowers))
+  length(union(InterUnionGenesFlowers,InterUnionGenesLeafs))
+  
+  length(setdiff(IntraUnionGenesFlowers,IntraUnionGenesLeafs))
+  length(setdiff(IntraUnionGenesLeafs,IntraUnionGenesFlowers))
+  length(union(IntraUnionGenesFlowers,IntraUnionGenesLeafs))
+    length(intersect(IntraUnionGenesFlowers,IntraUnionGenesLeafs))
+  
+  
+  IntraFlowersASE = IntraUnionGenesFlowers
+  IntraLeafsASE = IntraUnionGenesLeafs
   
   
   ASEinfo <- rbind(ASEinfo, getASEinfo(Intra7_2_SampleData,Intra7_2_RNA,rounds,cutoffNominal,cutoffAdjusted))
@@ -330,3 +399,25 @@ duplicated.random <- function(x, incomparables = FALSE, ...){
                "matrices for now."))
   }
 }
+
+  plotVenn <- function(A,B,C,D){
+  venn.diagram(
+    x = list(A,B,C,D),
+    filename = "1D-quadruple_Venn.tiff",
+    col = "black",
+    lty = "dotted",
+    lwd = 4,
+    fill = c("cornflowerblue", "green", "yellow", "darkorchid1"),
+    alpha = 0.50,
+    label.col = c("orange", "white", "darkorchid4", "white", "white", "white", "white", "white", "darkblue", "white", "white", "white", "white", "darkgreen", "white"),
+    cex = 2.5,
+    fontfamily = "serif",
+    fontface = "bold",
+    cat.col = c("darkblue", "darkgreen", "orange", "darkorchid4"),
+    cat.cex = 2.5,
+    cat.fontfamily = "serif"
+  );
+  }
+  
+
+
