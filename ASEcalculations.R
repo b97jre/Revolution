@@ -49,9 +49,23 @@ main <-function(fileName="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygous
   Inter4_1_RNA_Flower <-c("Inter4_1_1_F","Inter4_1_2_F","Inter4_1_3_F")
   Inter4_1_RNA_Leafs <-c("Inter4_1_1_L","Inter4_1_2_L","Inter4_1_4_L")
   
-  Inter4_1_SampleDataFlowers <- getPvalues(sampleData,Inter4_1_DNA,Inter4_1_RNA_Flower)
+  
+  #Filter for SNPs tthat is present in all samples with expression can be changed with RNAlow and RNA high and so on 
+  Inter4_1_Sample_FilteredAbundantBOTH <- filterData(sampleData,Inter4_1_DNA,Inter4_1_RNA_Flower, RNAlow=40, RNAhigh=2000,DNAlow=30,DNAhigh=200)
+  #calculate Pvalues
+  Inter4_1_SampleDataFlowers <- getPvalues2(Inter4_1_Sample_FilteredAbundantBOTH,DNAsamples,RNAsamples)
+  
+  # checking number of genes
   nrOfheterozygousGenesExpressedInIntraFlowers = length(unique(Inter4_1_SampleDataFlowers$annotation))
+  # get One SNP per gene that is the same for all downstream analysis 
+  Inter4_1_SampleDataFlowers1SNPperGene <- getOneSNPperGene(Inter4_1_SampleDataFlowers)
+  
+  # Check number of genes that complied to filter
+  nrOfheterozygousGenesExpressedInIntraFlowers = length(unique(Inter4_1_SampleDataFlowers$annotation))
+
+  #Union of genes that has ASE
   InterUnionGenesFlowers <- getASEgenesUnion(Inter4_1_SampleDataFlowers,Inter4_1_RNA_Flower,cutoffAdjusted=0.005)
+  #intersection of genes that has ASE
   InterIntersectGenesFlowers <- getASEgenesIntersect(Inter4_1_SampleDataFlowers,Inter4_1_RNA_Flower,cutoffAdjusted=0.005)
   
   
@@ -142,7 +156,7 @@ main <-function(fileName="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygous
   length(setdiff(IntraUnionGenesFlowers,IntraUnionGenesLeafs))
   length(setdiff(IntraUnionGenesLeafs,IntraUnionGenesFlowers))
   length(union(IntraUnionGenesFlowers,IntraUnionGenesLeafs))
-    length(intersect(IntraUnionGenesFlowers,IntraUnionGenesLeafs))
+  length(intersect(IntraUnionGenesFlowers,IntraUnionGenesLeafs))
   
   
   IntraFlowersASE = IntraUnionGenesFlowers
@@ -165,14 +179,26 @@ main <-function(fileName="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygous
 
 getPvalues <- function(sampleData,DNAsamples,RNAsamples, RNAlow=40, RNAhigh=2000,DNAlow=30,DNAhigh=200){
   
+  DataSetFilteredAbundantBOTH <- filterData(sampleData,DNAsamples,RNAsamples, RNAlow, RNAhigh,DNAlow,DNAhigh)
+  Pvalues <- getPvalues2(DataSetFilteredAbundantBOTH,DNAsamples,RNAsamples)
+  return (Pvalues)
+}
+
+filterData <- function(sampleData,DNAsamples,RNAsamples, RNAlow=40, RNAhigh=2000,DNAlow=30,DNAhigh=200){
+  
+  
   # Different filters
   # Only keep heterozygous DNAsamples
   DataSetFiltered <- filterCallData(sampleData, DNAsamples)  
   # Only keep heterozygous samples with DNA total count above 30 in all heterozygous samples
   DataSetFilteredAbundant <- filterTotalData(DataSetFiltered, DNAsamples,c(DNAlow,DNAhigh))  
   # Only keep heterozygous samples with DNA total count above 40 in all heterozygous samples
-  DataSetFilteredAbundantBOTH <- filterTotalData(DataSetFilteredAbundant, RNAsamples,c(RNAlow,RNAhigh))  
-  
+  DataSetFilteredAbundantBOTH <- filterTotalData(DataSetFilteredAbundant, RNAsamples,c(RNAlow,RNAhigh)) 
+  return (DataSetFilteredAbundantBOTH)
+}
+
+
+getPvalues2 <- function(DataSetFilteredAbundantBOTH,DNAsamples,RNAsamples){
   # Calculate pValues 
   DataSetFilteredAbundantBOTHwithPvalue <- Pvaluescalculation(DataSetFilteredAbundantBOTH, RNAsamples,DNAsamples)  
   
@@ -345,6 +371,9 @@ getASEgenesUnion <- function(Dataset,RNAsamples,rounds=10,cutoffNominal=0.005, c
   return (info)
 }
 
+
+
+
 getASEgenesIntersect <- function(Dataset,RNAsamples,rounds=10,cutoffNominal=0.005, cutoffAdjusted=0.005){
   DatasetOneSNPperGene <- getOneSNPperGene(Dataset) 
   info=NULL
@@ -370,7 +399,7 @@ getASEGenes <- function(DatasetOneSNPperGene,RNAsample,cutoffNominal=0.005, cuto
   return(Flowers$annotation)
 }
 
-getOneSNPperGene <- function(Dataset,classifier="annotation", cutoff = 0.05){
+getOneSNPperGene <- function(Dataset,classifier="annotation"){
   Dataset$duplicated <- duplicated.random(as.vector(Dataset[,classifier]))
   DataSetOneSNPperGene <- subset(Dataset, duplicated == FALSE)  
   return (DataSetOneSNPperGene)
