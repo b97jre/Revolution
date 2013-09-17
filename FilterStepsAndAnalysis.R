@@ -105,7 +105,7 @@ plotCNVsandSNPandRepeatsDistribution2 <-function(CtrlFreecfile,SNPfile,stepSize,
   abline(h=cumulativeDistributionRepeat, col="red")
   abline(v=RepeatCutoff, col="red")
   
-  FractionHeterozygozity <- plotfile$FractionHeterozygozity[plotfile$FractionHeterozygozity < 0.99999 & plotfile$FractionHeterozygozity > 0.000001]
+  FractionHeterozygozity <- plotfile$FractionHeterozygozity
   EmpiricalDensityFunction <- ecdf(FractionHeterozygozity)
   HeterozygozityCutoff= getCutoff(FractionHeterozygozity,cumulativeDistributionHetero)
   plot(EmpiricalDensityFunction,main= "Heterozygozity cumulative distribution over chromosomes",xlab="Fraction heterozygous SNPs")
@@ -132,7 +132,7 @@ plotCNVsandSNPandRepeatsDistribution2 <-function(CtrlFreecfile,SNPfile,stepSize,
   heterozygout <- plotfile[which(plotfile$homozygot==0),]  
   heterozygout$Stop = stepSize+heterozygout$Start 
   heterozygout[3:11]<- list(NULL)
-  heterozygout$Name <- paste(heterozygout$CHROM,heterozygout$Start,sep="_")
+  heterozygout$Name <- paste(heterozygout$Chromosome,heterozygout$Start,sep="_")
   
   HetFileName = paste(SNPfile,".bed",sep=".heterozygousRegions")
   write.table(heterozygout, file = HetFileName, quote = FALSE, sep = "\t",row.names=FALSE,col.names=FALSE)
@@ -272,6 +272,27 @@ boxScatterPlot2 <- function(x,y,ylabText="Major readCount",xlabText="Minor readC
   par(fig=c(0.65,1,0,0.8),new=TRUE)
   boxplot(y, axes=FALSE)
   mtext(title, side=3, outer=TRUE, line=-3)
+  
+}
+
+
+BarplotSNPsCounts <- function(SNPCountfile = "vcfCount.info"){
+  countTable <- read.table(SNPCountfile,header=FALSE,sep=" ")
+  countTable$fractionAll=countTable$V1/countTable$V1[1]
+  countTable$fractionExon=countTable$V1/countTable$V1[9]
+  countTable$names <- gsub("\\.vcf","",substring(countTable$V2 , 18)) 
+  countTable$names <- gsub("\\."," & ",countTable$names) 
+  countTable$names[1] = "None" 
+  
+  pdf(paste(SNPCountfile,"pdf",sep="."))
+  
+  # Fitting Labels 
+  par(las=2) # make label text perpendicular to axis
+  par(mar=c(15,4,4,2)) # increase y-axis margin.
+  
+  barplot(countTable$fractionAll[1:8], main="Fraction SNP after filter",  names.arg=countTable$names[1:8], cex.names=0.5)
+  barplot(countTable$fractionExon[9:16], main="Fraction SNP after filter in annotated exons",  names.arg=countTable$names[9:16], cex.names=0.5)
+  dev.off()
   
 }
 
