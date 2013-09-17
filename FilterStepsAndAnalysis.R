@@ -96,12 +96,17 @@ loadBinsData <-function(CtrlFreecfile,SNPfile,stepSize,repeatFile){
   }
   print("Done")
   return(binData)
+
   
   
 }
 
-setCutoffValues <- function(SNPfile,stepSize,repeatFile,binData,
+setCutoffValues <- function(CtrlFreecfile,SNPfile,stepSize,repeatFile,binData,
                             cumulativeDistributionRepeat=0.7,cumulativeDistributionHetero=0.8){
+  
+  
+  
+
   
   pdf("CutoffSelectionDistribution.pdf")
   par(mfrow=c(2,1), bty="l", cex=0.6)
@@ -118,9 +123,6 @@ setCutoffValues <- function(SNPfile,stepSize,repeatFile,binData,
   plot(EmpiricalDensityFunction,main= "Heterozygozity cumulative distribution over chromosomes",xlab="Fraction heterozygous SNPs")
   abline(h=cumulativeDistributionHetero, col="red")
   abline(v=HeterozygozityCutoff, col="red")
-  
-  
-  
   dev.off()
   
   
