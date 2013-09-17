@@ -101,14 +101,14 @@ plotCNVsandSNPandRepeatsDistribution2 <-function(CtrlFreecfile,SNPfile,stepSize,
   
   EmpiricalDensityFunction <- ecdf(plotfile$repeatFraction)
   RepeatCutoff= getCutoff(plotfile$repeatFraction,cumulativeDistributionRepeat)
-  plot(EmpiricalDensityFunction,main= "repeat cumulative distribution over chromosomes")
+  plot(EmpiricalDensityFunction,main= "repeat cumulative distribution over chromosomes",xlab="Fraction bp annotated as repeats by repeatmasker")
   abline(h=cumulativeDistributionRepeat, col="red")
   abline(v=RepeatCutoff, col="red")
   
   FractionHeterozygozity <- plotfile$FractionHeterozygozity[plotfile$FractionHeterozygozity < 0.99999 & plotfile$FractionHeterozygozity > 0.000001]
   EmpiricalDensityFunction <- ecdf(FractionHeterozygozity)
   HeterozygozityCutoff= getCutoff(FractionHeterozygozity,cumulativeDistributionHetero)
-  plot(EmpiricalDensityFunction,main= "Heterozygozity cumulative distribution over chromosomes")
+  plot(EmpiricalDensityFunction,main= "Heterozygozity cumulative distribution over chromosomes",xlab="Fraction heterozygous SNPs")
   abline(h=cumulativeDistributionHetero, col="red")
   abline(v=HeterozygozityCutoff, col="red")
 
