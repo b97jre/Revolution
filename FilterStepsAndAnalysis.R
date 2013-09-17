@@ -12,23 +12,28 @@
 main <- function(dataDir = "/Users/johanreimegard/Vetenskap/Data/capsella/Copy Number Variation/ctrlfreec_bowtie/ratiofiles"){
   
   
-  
+  stepSize=50000
   SNPfile <- c("BWA_genome.raw.vcf.Rfriendly")
   repeatFile <- c("Crubella_183.fa.out.noheader.bed.bin")
   CtrlFreecFileMerged <- c("all_FREEC50k.sorted.merged.bed")
   CtrlFreecFileExample <- c("CtrlFreec.r1GR1-2-KS3_DNA.STAR.ratio.txt")
+  
+  binData <- loadBinData(CtrlFreecFileMerged,SNPfile,stepSize,repeatFile)
+  binData <- setCutoffValues(CtrlFreecFileMerged,SNPfile,stepSize,repeatFile,binData,
+                              cumulativeDistributionRepeat=0.7,cumulativeDistributionHetero=0.8)
+  
 }
 
 
 
 
-getCutoff <- function(distribution,cumulativeDistribution=0.8){
+ExtractBins <- function(distribution,cumulativeDistribution=0.8){
   EmpiricalDensityFunction <- ecdf(distribution)
   InverseEmpiricalDensityFunction <- getInverseFunction(EmpiricalDensityFunction)
   
   cutoff=InverseEmpiricalDensityFunction(cumulativeDistribution)
   
-   return (cutoff$root)
+  return (cutoff$root)
   
 }
 
@@ -41,25 +46,25 @@ getInverseFunction <- function(f){
   return (inverse(f, 0.01, 100))
 }
 
-plotCNVsandSNPandRepeatsDistribution2 <-function(CtrlFreecfile,SNPfile,stepSize,repeatFile){
+loadBinsData <-function(CtrlFreecfile,SNPfile,stepSize,repeatFile){
   
   #concatenate all files
-  plotfile <- data.frame()
+  binData <- data.frame()
   ratio <- read.table(paste(CtrlFreecfile), header=T)
-  plotfile <- rbind(plotfile,ratio)
+  binData <- rbind(binData,ratio)
   
-  plotfile$Diploid=1
-  notDiploid <- which(plotfile$CopyNumber!= 2)
-  plotfile$Diploid[notDiploid]= 0
+  binData$Diploid=1
+  notDiploid <- which(binData$CopyNumber!= 2)
+  binData$Diploid[notDiploid]= 0
   
-  plotfile$homozygot=1
-  plotfile$FractionHeterozygozity=0
+  binData$homozygot=1
+  binData$FractionHeterozygozity=0
   
-  plotfile$repeatFraction = 0
-  plotfile$lowRepeat = 1     
+  binData$repeatFraction = 0
+  binData$lowRepeat = 1     
   
   
-  plotfile$keptForAnalysis=1
+  binData$keptForAnalysis=1
   
   SNPs <- read.table(SNPfile,sep="\t",header=TRUE)
   SNPs.common <- subset(SNPs, Cr1GR1.2.KS3_Call=="0/0"|Cr1GR1.2.KS3_Call=="0/1"|Cr1GR1.2.KS3_Call=="1/1")
@@ -71,9 +76,9 @@ plotCNVsandSNPandRepeatsDistribution2 <-function(CtrlFreecfile,SNPfile,stepSize,
   print("checking scaffolds")
   
   for (i in (1:length(scaffolds))) {
-    tt <- which(plotfile$Chromosome==as.character(scaffolds[[i]]))
+    tt <- which(binData$Chromosome==as.character(scaffolds[[i]]))
     tr <- which(repeatInfo$V1==as.character(scaffolds[[i]]))
-    starts <- plotfile$Start[tt]
+    starts <- binData$Start[tt]
     breakPoints <- c(0,starts+stepSize)
     
     if (length(tt)>0) {
@@ -81,55 +86,54 @@ plotCNVsandSNPandRepeatsDistribution2 <-function(CtrlFreecfile,SNPfile,stepSize,
       heteroHist <- hist(temp$POS[temp$Cr1GR1.2.KS3_Call=="0/1"],breaks=breakPoints,plot=FALSE)
       majorHist <- hist(temp$POS[temp$Cr1GR1.2.KS3_Call=="0/0"],breaks=breakPoints,plot=FALSE)
       minorHist <- hist(temp$POS[temp$Cr1GR1.2.KS3_Call=="1/1"],breaks=breakPoints,plot=FALSE)
-      plotfile$FractionHeterozygozity[tt] = heteroHist$counts/majorHist$counts 
+      binData$FractionHeterozygozity[tt] = heteroHist$counts/majorHist$counts 
       
       if(length(tr) == length(tt)){
-        plotfile$repeatFraction[tt] = repeatInfo$V4[tr]     
+        binData$repeatFraction[tt] = repeatInfo$V4[tr]     
       }
     }
     cat(scaffolds[[i]],sep = ".")
   }
   print("Done")
+  return(binData)
   
   
-  cumulativeDistributionRepeat=0.7
-  cumulativeDistributionHetero=0.8
+}
+
+setCutoffValues <- function(SNPfile,stepSize,repeatFile,binData,
+                            cumulativeDistributionRepeat=0.7,cumulativeDistributionHetero=0.8){
   
-  
- pdf("CutoffSelectionDistribution.pdf")
+  pdf("CutoffSelectionDistribution.pdf")
   par(mfrow=c(2,1), bty="l", cex=0.6)
   
-  EmpiricalDensityFunction <- ecdf(plotfile$repeatFraction)
-  RepeatCutoff= getCutoff(plotfile$repeatFraction,cumulativeDistributionRepeat)
+  EmpiricalDensityFunction <- ecdf(binData$repeatFraction)
+  RepeatCutoff= getCutoff(binData$repeatFraction,cumulativeDistributionRepeat)
   plot(EmpiricalDensityFunction,main= "repeat cumulative distribution over chromosomes",xlab="Fraction bp annotated as repeats by repeatmasker")
   abline(h=cumulativeDistributionRepeat, col="red")
   abline(v=RepeatCutoff, col="red")
   
-  FractionHeterozygozity <- plotfile$FractionHeterozygozity
+  FractionHeterozygozity <- binData$FractionHeterozygozity
   EmpiricalDensityFunction <- ecdf(FractionHeterozygozity)
   HeterozygozityCutoff= getCutoff(FractionHeterozygozity,cumulativeDistributionHetero)
   plot(EmpiricalDensityFunction,main= "Heterozygozity cumulative distribution over chromosomes",xlab="Fraction heterozygous SNPs")
   abline(h=cumulativeDistributionHetero, col="red")
   abline(v=HeterozygozityCutoff, col="red")
-
-    
+  
+  
   
   dev.off()
   
   
   
-  plotfile$homozygot = plotfile$FractionHeterozygozity<HeterozygozityCutoff 
-  plotfile$lowRepeat = plotfile$repeatFraction<RepeatCutoff     
-  plotfile$keptForAnalysis=plotfile$homozygot*plotfile$lowRepeat*plotfile$Diploid
+  binData$homozygot = binData$FractionHeterozygozity<HeterozygozityCutoff 
+  binData$lowRepeat = binData$repeatFraction<RepeatCutoff     
+  binData$keptForAnalysis=binData$homozygot*binData$lowRepeat*binData$Diploid
   
   
+  fractions <-c(CNVs = length(binData$Diploid[binData$Diploid==0])/length(binData$Diploid[]), Heterozygousity=length(binData$Diploid[binData$homozygot==0])/length(binData$Diploid[]),
+                RepeatRegions=length(binData$Diploid[binData$lowRepeat==0])/length(binData$Diploid[]),total=length(binData$Diploid[binData$keptForAnalysis == 0])/length(binData$Diploid[]))
   
-  
-  fractions <-c(CNVs = length(plotfile$Diploid[plotfile$Diploid==0])/length(plotfile$Diploid[]), Heterozygousity=length(plotfile$Diploid[plotfile$homozygot==0])/length(plotfile$Diploid[]),
-                RepeatRegions=length(plotfile$Diploid[plotfile$lowRepeat==0])/length(plotfile$Diploid[]),total=length(plotfile$Diploid[plotfile$keptForAnalysis == 0])/length(plotfile$Diploid[]))
-  
-  
-  heterozygout <- plotfile[which(plotfile$homozygot==0),]  
+  heterozygout <- binData[which(binData$homozygot==0),]  
   heterozygout$Stop = stepSize+heterozygout$Start 
   heterozygout[3:11]<- list(NULL)
   heterozygout$Name <- paste(heterozygout$Chromosome,heterozygout$Start,sep="_")
@@ -137,20 +141,16 @@ plotCNVsandSNPandRepeatsDistribution2 <-function(CtrlFreecfile,SNPfile,stepSize,
   HetFileName = paste(SNPfile,".bed",sep=".heterozygousRegions")
   write.table(heterozygout, file = HetFileName, quote = FALSE, sep = "\t",row.names=FALSE,col.names=FALSE)
   
-  repeatRegions <- plotfile[which(plotfile$lowRepeat==0),]  
+  repeatRegions <- binData[which(binData$lowRepeat==0),]  
   repeatRegions$Stop = stepSize+repeatRegions$Start 
   repeatRegions[3:11]<- list(NULL)
   repeatRegions$Name <- paste(repeatRegions$Chromosome,repeatRegions$Start,sep="_")
   
-  RepeatFileName = paste(repeatFile,".bed",sep=".aggregate")
+  RepeatFileName = paste(SNPfile,".bed",sep=".repeatRegoins")
   write.table(repeatRegions, file = RepeatFileName, quote = FALSE, sep = "\t",row.names=FALSE,col.names=FALSE)
   
   
-  
-  
   for(j in seq(1,7, by=2)){
-    
-    
     
     pdfName <- paste("kept_for_analysis_scaffold",j,(j+1),"distribution.pdf",sep= "_")
     pdf(pdfName)    
@@ -158,22 +158,22 @@ plotCNVsandSNPandRepeatsDistribution2 <-function(CtrlFreecfile,SNPfile,stepSize,
     par(mfrow=c(4,2), bty="l", cex=0.6)
     for (i in seq(j,j+1)) {
       print(i)
-      tt <- which(plotfile$Chromosome==paste("scaffold_",i,sep=""))
+      tt <- which(binData$Chromosome==paste("scaffold_",i,sep=""))
       if (length(tt)>0) {
         par(mar=c(5,4,4,4))
         #uncomment next line for individual plots
-        plot(plotfile$Start[tt],plotfile$keptForAnalysis[tt],pch = 20,col = colors()[88],xlab = paste ("position, chr",i),ylab="", type='l')
+        plot(binData$Start[tt],binData$keptForAnalysis[tt],pch = 20,col = colors()[88],xlab = paste ("position, chr",i),ylab="", type='l')
         mtext("Kept for analysis (Total)",side=2,line=2,col=1,cex=0.5)
       }
     }
     for (i in seq(j,j+1)) {
-      tt <- which(plotfile$Chromosome==paste("scaffold_",i,sep=""))
+      tt <- which(binData$Chromosome==paste("scaffold_",i,sep=""))
       if (length(tt)>0) {
         par(mar=c(5,4,4,4))
         #uncomment next line for individual plots
-        plot(plotfile$Start[tt],plotfile$Diploid[tt],pch = 20,xlab="",,ylab="", type='l')
+        plot(binData$Start[tt],binData$Diploid[tt],pch = 20,xlab="",,ylab="", type='l')
         par(new=T)
-        plot(plotfile$Start[tt],plotfile$CopyNumber[tt],pch = 20,col = colors()[99],axes=FALSE,xlab = paste ("position, chr",i),ylab="", type='l')
+        plot(binData$Start[tt],binData$CopyNumber[tt],pch = 20,col = colors()[99],axes=FALSE,xlab = paste ("position, chr",i),ylab="", type='l')
         axis(4,col=4,col.lab=4,col.axis = colors()[99])
         
         mtext("Copy number (CTRLfreec)",side=4,line=2,col=colors()[99],cex=0.5)
@@ -182,13 +182,13 @@ plotCNVsandSNPandRepeatsDistribution2 <-function(CtrlFreecfile,SNPfile,stepSize,
     }
     
     for (i in seq(j,j+1)) {
-      tt <- which(plotfile$Chromosome==paste("scaffold_",i,sep=""))
+      tt <- which(binData$Chromosome==paste("scaffold_",i,sep=""))
       if (length(tt)>0) {
         par(mar=c(5,4,4,4))
         #uncomment next line for individual plots
-        plot(plotfile$Start[tt],plotfile$lowRepeat[tt],pch = 20,xlab="",,ylab="", type='l')
+        plot(binData$Start[tt],binData$lowRepeat[tt],pch = 20,xlab="",,ylab="", type='l')
         par(new=T)
-        plot(plotfile$Start[tt],plotfile$repeatFraction[tt],pch = 20,col = colors()[99],axes=FALSE,xlab = paste ("position, chr",i),ylab="", type='l')
+        plot(binData$Start[tt],binData$repeatFraction[tt],pch = 20,col = colors()[99],axes=FALSE,xlab = paste ("position, chr",i),ylab="", type='l')
         axis(4,col=4,col.lab=4,col.axis = colors()[99])
         mtext("Fraction repeat(repeatMasker)",side=4,line=2,col= colors()[99],cex=0.5)
         mtext("Kept for analysis",side=2,line=2,col=1,cex=0.5)
@@ -196,12 +196,12 @@ plotCNVsandSNPandRepeatsDistribution2 <-function(CtrlFreecfile,SNPfile,stepSize,
     }
     
     for (i in seq(j,j+1)) {
-      tt <- which(plotfile$Chromosome==paste("scaffold_",i,sep=""))
+      tt <- which(binData$Chromosome==paste("scaffold_",i,sep=""))
       if (length(tt)>0) {
         par(mar=c(5,4,4,4))
-        plot(plotfile$Start[tt],plotfile$homozygot[tt],pch = 20,xlab="",,ylab="", type='l')
+        plot(binData$Start[tt],binData$homozygot[tt],pch = 20,xlab="",,ylab="", type='l')
         par(new=T)
-        plot(plotfile$Start[tt],plotfile$FractionHeterozygozity[tt],pch = 20,col = colors()[99],axes=FALSE,xlab = paste ("position, chr",i),ylab="", type='l')
+        plot(binData$Start[tt],binData$FractionHeterozygozity[tt],pch = 20,col = colors()[99],axes=FALSE,xlab = paste ("position, chr",i),ylab="", type='l')
         axis(4,col=4,col.lab=4,col.axis = colors()[99])
         mtext("Fraction heterozygout SNPs (GATK)",side=4,line=2,col= colors()[99],cex=0.5)
         mtext("Kept for analysis",side=2,line=2,col=1,cex=0.5)
@@ -209,7 +209,7 @@ plotCNVsandSNPandRepeatsDistribution2 <-function(CtrlFreecfile,SNPfile,stepSize,
     }
     dev.off()
   }
-
+  
   
   
   pdfName <- paste("kept_for_analysis_scaffold",".summary.distribution.pdf",sep= "_")
@@ -218,10 +218,10 @@ plotCNVsandSNPandRepeatsDistribution2 <-function(CtrlFreecfile,SNPfile,stepSize,
   par(mfrow=c(4,2), bty="l", cex=0.6)
   for (i in 1:8) {
     print(i)
-    tt <- which(plotfile$Chromosome==paste("scaffold_",i,sep=""))
+    tt <- which(binData$Chromosome==paste("scaffold_",i,sep=""))
     if (length(tt)>0) {
       par(mar=c(5,4,4,4))
-      chromsomeSpecific = plotfile[tt,]
+      chromsomeSpecific = binData[tt,]
       
       Total=length(chromsomeSpecific$keptForAnalysis[chromsomeSpecific$keptForAnalysis==0])/length(tt)
       Repeat=length(chromsomeSpecific$keptForAnalysis[chromsomeSpecific$lowRepeat==FALSE])/length(tt)
@@ -238,7 +238,7 @@ plotCNVsandSNPandRepeatsDistribution2 <-function(CtrlFreecfile,SNPfile,stepSize,
   pdfName <- paste("kept_for_analysis_scaffold",".summary.distribution.pdf",sep= "_All_")
   pdf(pdfName)    
   
-  chromsomeSpecific = plotfile
+  chromsomeSpecific = binData
   
   Total=length(chromsomeSpecific$keptForAnalysis[chromsomeSpecific$keptForAnalysis==0])/length(chromsomeSpecific$keptForAnalysis)
   Repeat=length(chromsomeSpecific$keptForAnalysis[chromsomeSpecific$lowRepeat==FALSE])/length(chromsomeSpecific$keptForAnalysis)
@@ -248,6 +248,8 @@ plotCNVsandSNPandRepeatsDistribution2 <-function(CtrlFreecfile,SNPfile,stepSize,
   
   dev.off()
   
+  
+  return (binData)
 }
 
 
@@ -285,7 +287,7 @@ BarplotSNPsCounts <- function(SNPCountfile = "vcfCount.info"){
   countTable$names[1] = "None" 
   
   pdf(paste(SNPCountfile,"pdf",sep="."))
-  
+  par(mfrow=c(1,2), bty="l", cex=0.6)
   # Fitting Labels 
   par(las=2) # make label text perpendicular to axis
   par(mar=c(15,4,4,2)) # increase y-axis margin.
