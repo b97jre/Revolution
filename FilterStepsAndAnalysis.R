@@ -9,20 +9,89 @@
 
 
 #plot CtrlFREEC results
-main <- function(dataDir = "/Users/johanreimegard/Vetenskap/Data/capsella/Copy Number Variation/ctrlfreec_bowtie/ratiofiles"){
+main <- function(dataDir = "/Users/johanreimegard/Vetenskap/Data/capsella/Copy Number Variation/ctrlfreec_bowtie/ratiofiles",
+                 stepSize=50000 ,
+                 SNPfile = "BWA_genome.raw.vcf.Rfriendly" ,
+                 repeatFile = "Crubella_183.fa.out.noheader.bed.bin",
+                 CtrlFreecFile ="CtrlFreec.r1GR1-2-KS3_DNA.STAR.ratio.txt"
+){
   
   
-  stepSize=50000
-  SNPfile <- c("BWA_genome.raw.vcf.Rfriendly")
-  repeatFile <- c("Crubella_183.fa.out.noheader.bed.bin")
-  CtrlFreecFileMerged <- c("all_FREEC50k.sorted.merged.bed")
-  CtrlFreecFileExample <- c("CtrlFreec.r1GR1-2-KS3_DNA.STAR.ratio.txt")
+  #   stepSize=50000
+  #   SNPfile <- c("BWA_genome.raw.vcf.Rfriendly")
+  #   repeatFile <- c("Crubella_183.fa.out.noheader.bed.bin")
+  #   CtrlFreecFileMerged <- c("all_FREEC50k.sorted.merged.bed")
+  #   CtrlFreecFileExample <- c("CtrlFreec.r1GR1-2-KS3_DNA.STAR.ratio.txt")
   
-  binData <- loadBinData(CtrlFreecFileMerged,SNPfile,stepSize,repeatFile)
-  binData <- setCutoffValues(CtrlFreecFileMerged,SNPfile,stepSize,repeatFile,binData,
-                              cumulativeDistributionRepeat=0.7,cumulativeDistributionHetero=0.8)
+  # load all data into one file for 
+  binData <- loadBinsData(CtrlFreecFileExample,SNPfile,stepSize,repeatFile)
+  
+  # add all counts SNP counts
+  binData$totalCounts = binData$heteroHistCounts + binData$majorHistCounts + binData$minorHistCounts
+  # count fraction heterozygozity
+  binData$FractionHeterozygozity =  binData$heteroHistCounts/binData$totalCounts
+  
+  
+  # save data as a R file can be loaded by load function 
+  save(binData,file=paste(SNPfile,"filter_heterozygous_repeats_CNVs_data.Rda",sep="_"))
+  
+  # save data as a tab delimeted  file 
+  write.table(binData,file=paste(SNPfile,"filter_heterozygous_repeats_CNVs_data.txt",sep="_"),quote=FALSE,row.names=FALSE,col.names=TRUE,sep="\t")
+  
+  # reiterare and plot distribution to deterime good cutoffs
+  cumulativeDistributionRepeat=0.7
+  cumulativeDistributionHetero=0.8
+  plotDistributionWithCutoff(binData,cumulativeDistributionRepeat,cumulativeDistributionHetero) 
+  
+  
+  # print the cutoffs used to pdf
+  pdf("CutoffSelectionDistribution.pdf")
+  cutoffValues <- plotDistributionWithCutoff(binData,cumulativeDistributionRepeat,cumulativeDistributionHetero)
+  dev.off()
+  
+  #Use the cutoffs and save bedfiles with regions of high repeat and high heterozygous regions
+  
+  binData = FilterAndSaveRegionsToBED(binData,SNPfile,cutoffValues)
+  
+  
+  #check the chromosomes (scaffold j and j+1 will be plotted)
+  
+  j=1
+  plot2Chromosomes(binData,j)
+  
+  #check the overall coverage filtering 
+  plotScaffoldInfo(binData)
+  
+  # plotAlltoFiles
+  
+  for(j in seq(1,7, by=2)){
+    
+    pdfName <- paste("kept_for_analysis_scaffold",j,(j+1),"distribution.pdf",sep= "_")
+    pdf(pdfName)    
+    plot2Chromosomes(binData,j)
+    dev.off()
+    
+  }
+  
+  pdfName <- paste("kept_for_analysis_scaffold",".summary.distribution.pdf",sep= "_")
+  pdf(pdfName)    
+  plotScaffoldInfo(binData)
+  dev.off()
+  
+  
+  pdfName <- paste("kept_for_analysis_scaffold",".summary.distribution.pdf",sep= "_All_")
+  pdf(pdfName)    
+  dev.off()
+  
+  
+  
   
 }
+
+
+
+
+
 
 
 
@@ -34,7 +103,6 @@ ExtractBins <- function(distribution,cumulativeDistribution=0.8){
   cutoff=InverseEmpiricalDensityFunction(cumulativeDistribution)
   
   return (cutoff$root)
-  
 }
 
 
@@ -59,6 +127,12 @@ loadBinsData <-function(CtrlFreecfile,SNPfile,stepSize,repeatFile){
   
   binData$homozygot=1
   binData$FractionHeterozygozity=0
+  binData$totalCounts = 0
+  binData$heteroHistCounts = 0
+  binData$majorHistCounts = 0 
+  binData$minorHistCounts = 0 
+  
+  
   
   binData$repeatFraction = 0
   binData$lowRepeat = 1     
@@ -86,7 +160,11 @@ loadBinsData <-function(CtrlFreecfile,SNPfile,stepSize,repeatFile){
       heteroHist <- hist(temp$POS[temp$Cr1GR1.2.KS3_Call=="0/1"],breaks=breakPoints,plot=FALSE)
       majorHist <- hist(temp$POS[temp$Cr1GR1.2.KS3_Call=="0/0"],breaks=breakPoints,plot=FALSE)
       minorHist <- hist(temp$POS[temp$Cr1GR1.2.KS3_Call=="1/1"],breaks=breakPoints,plot=FALSE)
-      binData$FractionHeterozygozity[tt] = heteroHist$counts/majorHist$counts 
+      
+      
+      binData$heteroHistCounts[tt] = heteroHist$counts 
+      binData$majorHistCounts[tt] = majorHist$counts 
+      binData$minorHistCounts[tt] = minorHist$counts 
       
       if(length(tr) == length(tt)){
         binData$repeatFraction[tt] = repeatInfo$V4[tr]     
@@ -96,41 +174,51 @@ loadBinsData <-function(CtrlFreecfile,SNPfile,stepSize,repeatFile){
   }
   print("Done")
   return(binData)
+}
 
+plotDistribution <-function(binData){
+  par(mfrow=c(2,1), bty="l", cex=0.6)
   
+  EmpiricalDensityFunction <- ecdf(binData$repeatFraction)
+  #RepeatCutoff= getCutoff(binData$repeatFraction,cumulativeDistributionRepeat)
+  plot(EmpiricalDensityFunction,main= "repeat cumulative distribution over chromosomes",xlab="Fraction bp annotated as repeats by repeatmasker")
+  
+  FractionHeterozygozity <- binData$FractionHeterozygozity
+  EmpiricalDensityFunction <- ecdf(FractionHeterozygozity)
+  #HeterozygozityCutoff= getCutoff(FractionHeterozygozity,cumulativeDistributionHetero)
+  plot(EmpiricalDensityFunction,main= "Heterozygozity cumulative distribution over chromosomes",xlab="Fraction heterozygous SNPs")
   
 }
 
-setCutoffValues <- function(CtrlFreecfile,SNPfile,stepSize,repeatFile,binData,
-                            cumulativeDistributionRepeat=0.7,cumulativeDistributionHetero=0.8){
-  
-  
-  
-
-  
-  pdf("CutoffSelectionDistribution.pdf")
+plotDistributionWithCutoff <-function(binData,cumulativeDistributionRepeat=0.7,cumulativeDistributionHetero=0.8){
   par(mfrow=c(2,1), bty="l", cex=0.6)
   
   EmpiricalDensityFunction <- ecdf(binData$repeatFraction)
   RepeatCutoff= getCutoff(binData$repeatFraction,cumulativeDistributionRepeat)
   plot(EmpiricalDensityFunction,main= "repeat cumulative distribution over chromosomes",xlab="Fraction bp annotated as repeats by repeatmasker")
-  abline(h=cumulativeDistributionRepeat, col="red")
-  abline(v=RepeatCutoff, col="red")
+  lines(x=c(-0.6,RepeatCutoff),y=c(cumulativeDistributionRepeat,cumulativeDistributionRepeat), col="red")
+  lines(x=c(RepeatCutoff,RepeatCutoff),y=c(0,cumulativeDistributionRepeat), col="red")
+  
   
   FractionHeterozygozity <- binData$FractionHeterozygozity
   EmpiricalDensityFunction <- ecdf(FractionHeterozygozity)
   HeterozygozityCutoff= getCutoff(FractionHeterozygozity,cumulativeDistributionHetero)
   plot(EmpiricalDensityFunction,main= "Heterozygozity cumulative distribution over chromosomes",xlab="Fraction heterozygous SNPs")
-  abline(h=cumulativeDistributionHetero, col="red")
-  abline(v=HeterozygozityCutoff, col="red")
-  dev.off()
+  lines(x=c(-0.6,HeterozygozityCutoff),y=c(cumulativeDistributionHetero,cumulativeDistributionHetero), col="red")
+  lines(x=c(HeterozygozityCutoff,HeterozygozityCutoff),y=c(0,cumulativeDistributionHetero), col="red")
+  
+  cutoffValues <- c(RepeatCutoff = RepeatCutoff,HeterozygozityCutoff = HeterozygozityCutoff)
+  
+}
+
+
+FilterAndSaveRegionsToBED <- function(binData,SNPfile,cutoffValues){
   
   
+  binData$homozygot = binData$FractionHeterozygozity<cutoffValues['HeterozygozityCutoff'] 
+  binData$lowRepeat = binData$repeatFraction<cutoffValues['RepeatCutoff']     
   
-  binData$homozygot = binData$FractionHeterozygozity<HeterozygozityCutoff 
-  binData$lowRepeat = binData$repeatFraction<RepeatCutoff     
   binData$keptForAnalysis=binData$homozygot*binData$lowRepeat*binData$Diploid
-  
   
   fractions <-c(CNVs = length(binData$Diploid[binData$Diploid==0])/length(binData$Diploid[]), Heterozygousity=length(binData$Diploid[binData$homozygot==0])/length(binData$Diploid[]),
                 RepeatRegions=length(binData$Diploid[binData$lowRepeat==0])/length(binData$Diploid[]),total=length(binData$Diploid[binData$keptForAnalysis == 0])/length(binData$Diploid[]))
@@ -151,73 +239,88 @@ setCutoffValues <- function(CtrlFreecfile,SNPfile,stepSize,repeatFile,binData,
   RepeatFileName = paste(SNPfile,".bed",sep=".repeatRegoins")
   write.table(repeatRegions, file = RepeatFileName, quote = FALSE, sep = "\t",row.names=FALSE,col.names=FALSE)
   
+  return(binData)
   
-  for(j in seq(1,7, by=2)){
-    
-    pdfName <- paste("kept_for_analysis_scaffold",j,(j+1),"distribution.pdf",sep= "_")
-    pdf(pdfName)    
-    
-    par(mfrow=c(4,2), bty="l", cex=0.6)
-    for (i in seq(j,j+1)) {
-      print(i)
-      tt <- which(binData$Chromosome==paste("scaffold_",i,sep=""))
-      if (length(tt)>0) {
-        par(mar=c(5,4,4,4))
-        #uncomment next line for individual plots
-        plot(binData$Start[tt],binData$keptForAnalysis[tt],pch = 20,col = colors()[88],xlab = paste ("position, chr",i),ylab="", type='l')
-        mtext("Kept for analysis (Total)",side=2,line=2,col=1,cex=0.5)
-      }
+}
+
+
+
+
+plotScaffoldInfoSummary <- function(binData){
+  chromsomeSpecific = binData
+  
+  Total=length(chromsomeSpecific$keptForAnalysis[chromsomeSpecific$keptForAnalysis==0])/length(chromsomeSpecific$keptForAnalysis)
+  Repeat=length(chromsomeSpecific$keptForAnalysis[chromsomeSpecific$lowRepeat==FALSE])/length(chromsomeSpecific$keptForAnalysis)
+  Heterozygout=length(chromsomeSpecific$keptForAnalysis[chromsomeSpecific$homozygot==FALSE])/length(chromsomeSpecific$keptForAnalysis)
+  CNVs=length(chromsomeSpecific$keptForAnalysis[chromsomeSpecific$Diploid==0])/length(chromsomeSpecific$keptForAnalysis)
+  barplot(c(Total,Repeat,Heterozygout,CNVs),ylim=c(0,1),names.arg=c("Total","Repeats","Heterozygout","CNVs"),main=paste("All scaffolds"))
+  
+}
+
+
+
+plot2Chromosomes <- function(binData,j){
+  
+  par(mfrow=c(4,2), bty="l", cex=0.6)
+  for (i in seq(j,j+1)) {
+    print(i)
+    tt <- which(binData$Chromosome==paste("scaffold_",i,sep=""))
+    if (length(tt)>0) {
+      par(mar=c(5,4,4,4))
+      #uncomment next line for individual plots
+      plot(binData$Start[tt],binData$keptForAnalysis[tt],pch = 20,col = colors()[88],xlab = paste ("position, chr",i),ylab="", type='l')
+      mtext("Kept for analysis (Total)",side=2,line=2,col=1,cex=0.5)
     }
-    for (i in seq(j,j+1)) {
-      tt <- which(binData$Chromosome==paste("scaffold_",i,sep=""))
-      if (length(tt)>0) {
-        par(mar=c(5,4,4,4))
-        #uncomment next line for individual plots
-        plot(binData$Start[tt],binData$Diploid[tt],pch = 20,xlab="",,ylab="", type='l')
-        par(new=T)
-        plot(binData$Start[tt],binData$CopyNumber[tt],pch = 20,col = colors()[99],axes=FALSE,xlab = paste ("position, chr",i),ylab="", type='l')
-        axis(4,col=4,col.lab=4,col.axis = colors()[99])
-        
-        mtext("Copy number (CTRLfreec)",side=4,line=2,col=colors()[99],cex=0.5)
-        mtext("Kept for analysis",side=2,line=2,col=1,cex=0.5)
-      }
+  }
+  
+  for (i in seq(j,j+1)) {
+    tt <- which(binData$Chromosome==paste("scaffold_",i,sep=""))
+    if (length(tt)>0) {
+      par(mar=c(5,4,4,4))
+      #uncomment next line for individual plots
+      plot(binData$Start[tt],binData$Diploid[tt],pch = 20,xlab="",,ylab="", type='l')
+      par(new=T)
+      plot(binData$Start[tt],binData$CopyNumber[tt],pch = 20,col = colors()[99],axes=FALSE,xlab = paste ("position, chr",i),ylab="", type='l')
+      axis(4,col=4,col.lab=4,col.axis = colors()[99])
+      
+      mtext("Copy number (CTRLfreec)",side=4,line=2,col=colors()[99],cex=0.5)
+      mtext("Kept for analysis",side=2,line=2,col=1,cex=0.5)
     }
-    
-    for (i in seq(j,j+1)) {
-      tt <- which(binData$Chromosome==paste("scaffold_",i,sep=""))
-      if (length(tt)>0) {
-        par(mar=c(5,4,4,4))
-        #uncomment next line for individual plots
-        plot(binData$Start[tt],binData$lowRepeat[tt],pch = 20,xlab="",,ylab="", type='l')
-        par(new=T)
-        plot(binData$Start[tt],binData$repeatFraction[tt],pch = 20,col = colors()[99],axes=FALSE,xlab = paste ("position, chr",i),ylab="", type='l')
-        axis(4,col=4,col.lab=4,col.axis = colors()[99])
-        mtext("Fraction repeat(repeatMasker)",side=4,line=2,col= colors()[99],cex=0.5)
-        mtext("Kept for analysis",side=2,line=2,col=1,cex=0.5)
-      }
-    }
-    
-    for (i in seq(j,j+1)) {
-      tt <- which(binData$Chromosome==paste("scaffold_",i,sep=""))
-      if (length(tt)>0) {
-        par(mar=c(5,4,4,4))
-        plot(binData$Start[tt],binData$homozygot[tt],pch = 20,xlab="",,ylab="", type='l')
-        par(new=T)
-        plot(binData$Start[tt],binData$FractionHeterozygozity[tt],pch = 20,col = colors()[99],axes=FALSE,xlab = paste ("position, chr",i),ylab="", type='l')
-        axis(4,col=4,col.lab=4,col.axis = colors()[99])
-        mtext("Fraction heterozygout SNPs (GATK)",side=4,line=2,col= colors()[99],cex=0.5)
-        mtext("Kept for analysis",side=2,line=2,col=1,cex=0.5)
-      }
-    }
-    dev.off()
   }
   
   
+  for (i in seq(j,j+1)) {
+    tt <- which(binData$Chromosome==paste("scaffold_",i,sep=""))
+    if (length(tt)>0) {
+      par(mar=c(5,4,4,4))
+      #uncomment next line for individual plots
+      plot(binData$Start[tt],binData$lowRepeat[tt],pch = 20,xlab="",,ylab="", type='l')
+      par(new=T)
+      plot(binData$Start[tt],binData$repeatFraction[tt],pch = 20,col = colors()[99],axes=FALSE,xlab = paste ("position, chr",i),ylab="", type='l')
+      axis(4,col=4,col.lab=4,col.axis = colors()[99])
+      mtext("Fraction repeat(repeatMasker)",side=4,line=2,col= colors()[99],cex=0.5)
+      mtext("Kept for analysis",side=2,line=2,col=1,cex=0.5)
+    }
+  }
   
-  pdfName <- paste("kept_for_analysis_scaffold",".summary.distribution.pdf",sep= "_")
-  pdf(pdfName)    
+  for (i in seq(j,j+1)) {
+    tt <- which(binData$Chromosome==paste("scaffold_",i,sep=""))
+    if (length(tt)>0) {
+      par(mar=c(5,4,4,4))
+      plot(binData$Start[tt],binData$homozygot[tt],pch = 20,xlab="",,ylab="", type='l')
+      par(new=T)
+      plot(binData$Start[tt],binData$FractionHeterozygozity[tt],pch = 20,col = colors()[99],axes=FALSE,xlab = paste ("position, chr",i),ylab="", type='l')
+      axis(4,col=4,col.lab=4,col.axis = colors()[99])
+      mtext("Fraction heterozygout SNPs (GATK)",side=4,line=2,col= colors()[99],cex=0.5)
+      mtext("Kept for analysis",side=2,line=2,col=1,cex=0.5)
+    }
+  }
+}
+
+plotScaffoldInfo<- function(binData){
   
-  par(mfrow=c(4,2), bty="l", cex=0.6)
+  
+  par(mfrow=c(5,2), bty="l", cex=0.6)
   for (i in 1:8) {
     print(i)
     tt <- which(binData$Chromosome==paste("scaffold_",i,sep=""))
@@ -234,11 +337,12 @@ setCutoffValues <- function(CtrlFreecfile,SNPfile,stepSize,repeatFile,binData,
     }
   }
   
-  dev.off()
+  plotScaffoldInfoSummary(binData)
   
-  
-  pdfName <- paste("kept_for_analysis_scaffold",".summary.distribution.pdf",sep= "_All_")
-  pdf(pdfName)    
+}
+
+
+plotScaffoldInfoSummary<- function(binData){
   
   chromsomeSpecific = binData
   
@@ -247,11 +351,6 @@ setCutoffValues <- function(CtrlFreecfile,SNPfile,stepSize,repeatFile,binData,
   Heterozygout=length(chromsomeSpecific$keptForAnalysis[chromsomeSpecific$homozygot==FALSE])/length(chromsomeSpecific$keptForAnalysis)
   CNVs=length(chromsomeSpecific$keptForAnalysis[chromsomeSpecific$Diploid==0])/length(chromsomeSpecific$keptForAnalysis)
   barplot(c(Total,Repeat,Heterozygout,CNVs),ylim=c(0,1),names.arg=c("Total","Repeats","Heterozygout","CNVs"),main=paste("All scaffolds"))
-  
-  dev.off()
-  
-  
-  return (binData)
 }
 
 
