@@ -210,7 +210,7 @@ plotDistributionWithCutoff <-function(binData,cumulativeDistributionRepeat=0.7,c
 }
 
 
-FilterAndSaveRegionsToBED <- function(binData,SNPfile,cutoffValues){
+FilterAndSaveRegionsToBED <- function(binData,SNPfile,cutoffValues, stepSize=50000){
   
   
   binData$homozygot = binData$FractionHeterozygozity<cutoffValues['HeterozygozityCutoff'] 
