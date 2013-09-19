@@ -21,7 +21,7 @@ main <-function(fileName="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygous
   sampleData$annotation=annotationData$V3
   
   
-  # read in different samples
+  # read in different samples kinds od samples will not go through all though
   DNAInterSamples <- c("Inter3.1","Inter4.1","Inter5.1")
   DNAIntraSamples <- c("Intra6.3","Intra7.2","Intra8.2")
   RNAInterSamples <- c("Inter3_1_1_F","Inter3_1_1_L","Inter4_1_1_F","Inter4_1_1_L","Inter4_1_2_F","Inter4_1_2_L","Inter4_1_3_F","Inter4_1_4_L","Inter5_1_1_F","Inter5_1_1_L")
@@ -29,21 +29,51 @@ main <-function(fileName="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygous
   AllSamples <- c(DNAInterSamples,DNAIntraSamples,RNAInterSamples,RNAIntraSamples)
   
   
+  ASEinfo <- getASEinfo(sampleData,DNAsamples,RNAsamples) 
+
   
   
   
+  
+  getASEinfo <- function(sampleData,DNAsamples,RNAsamples, RNAlow=40, RNAhigh=2000,DNAlow=30,DNAhigh=200){
+    
+    
+    ASEinfo= list()
+    cutoffs <- c(RNAlow=RNAlow, RNAhigh=RNAhigh,DNAlow=DNAlow,DNAhigh=DNAhigh)
+    
+    
+    ASEinfo <- c(ASEinfo,DNAsamples)
+    ASEinfo <- c(ASEinfo,RNAsamples)
+    ASEinfo <- c(ASEinfo, sample_Filtered )
+    #Filter for SNPs tthat is present in all samples with expression can be changed with RNAlow and RNA high and so on 
+    sample_Filtered <- filterData(sampleData,DNAsamples,RNAsamples, RNAlow=40, RNAhigh=2000,DNAlow=30,DNAhigh=200)
+    ASEinfo <- c(ASEinfo, sample_Filtered )
+
+    #get OneSNP per Gene
+    sample_Filtered_1SNPperGene <- getOneSNPperGene(sample_Filtered)
+    #calculate Pvalues
+    sample_Filtered_1SNPperGene_pValues <- getPvalues2(sample_Filtered_1SNPperGene,DNAsamples,RNAsamples)
+    ASEinfo <- c(ASEinfo, sample_Filtered_1SNPperGene_pValues )
+    
+    # checking number of genes 
+    heterozygousGenes = unique(sample_Filtered_1SNPperGene_pValues$annotation)
+    ASEinfo <- c(ASEinfo, heterozygousGenes)
+    
+    #Union of genes that has ASE
+    InterUnionGenesFlowers <- getASEgenesUnion(sample_Filtered_1SNPperGene_pValues,RNAsamples,cutoffAdjusted=0.005)
+    #intersection of genes that has ASE
+    InterIntersectGenesFlowers <- getASEgenesIntersect(Inter4_1_SampleDataFlowers,Inter4_1_RNA_Flower,cutoffAdjusted=0.005)
+    
+    
+    
+    
+  }
+    
   
   
   # 
   print("Checking for ASE")
-  
-  ASEinfo = data.frame()
-  Inter3_1_DNA <- c("Inter3.1")
-  Inter3_1_RNA <-c("Inter3_1_1_F","Inter3_1_1_L")  
-  Inter3_1_SampleData <- getPvalues(sampleData,Inter3_1_DNA,Inter3_1_RNA)
-  print(Inter3_1_SampleData$Inter3.1_Count1,Inter3_1_SampleData$Inter3.1_Count2)
-  ASEinfo <- rbind(ASEinfo, getASEinfo(Inter3_1_SampleData,Inter3_1_RNA,rounds,cutoffNominal,cutoffAdjusted))
-  
+ 
   Inter4_1_DNA <- c("Inter4.1")
   Inter4_1_RNA <-c("Inter4_1_1_F","Inter4_1_1_L","Inter4_1_2_F","Inter4_1_2_L","Inter4_1_3_F","Inter4_1_4_L")  
   Inter4_1_RNA_Flower <-c("Inter4_1_1_F","Inter4_1_2_F","Inter4_1_3_F")
@@ -51,9 +81,7 @@ main <-function(fileName="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygous
   
   
   #Filter for SNPs tthat is present in all samples with expression can be changed with RNAlow and RNA high and so on 
-  Inter4_1_Sample_FilteredAbundantBOTH <- filterData(sampleData,Inter4_1_DNA,Inter4_1_RNA_Flower, RNAlow=40, RNAhigh=2000,DNAlow=30,DNAhigh=200)
   #calculate Pvalues
-  Inter4_1_SampleDataFlowers <- getPvalues2(Inter4_1_Sample_FilteredAbundantBOTH,DNAsamples,RNAsamples)
   
   # checking number of genes
   nrOfheterozygousGenesExpressedInIntraFlowers = length(unique(Inter4_1_SampleDataFlowers$annotation))
@@ -177,12 +205,73 @@ main <-function(fileName="BWA_genome.raw.all_FREEC50k.repeatRegions.heterozygous
 }
 
 
-getPvalues <- function(sampleData,DNAsamples,RNAsamples, RNAlow=40, RNAhigh=2000,DNAlow=30,DNAhigh=200){
+getNrOfGenes <-function(CtrlFreecfile,SNPs.common,stepSize,repeatFile){
   
-  DataSetFilteredAbundantBOTH <- filterData(sampleData,DNAsamples,RNAsamples, RNAlow, RNAhigh,DNAlow,DNAhigh)
-  Pvalues <- getPvalues2(DataSetFilteredAbundantBOTH,DNAsamples,RNAsamples)
-  return (Pvalues)
+  #concatenate all files
+  binData <- data.frame()
+  ratio <- read.table(paste(CtrlFreecfile), header=T)
+  binData <- rbind(binData,ratio)
+
+  binData$nrOfGenesGenes=0
+  
+  
+  
+  binData$homozygot=1
+  binData$FractionHeterozygozity=0
+  binData$totalCounts = 0
+  binData$heteroHistCounts = 0
+  binData$majorHistCounts = 0 
+  binData$minorHistCounts = 0 
+  
+  
+  
+  binData$repeatFraction = 0
+  binData$lowRepeat = 1     
+  
+  
+  binData$keptForAnalysis=1
+  
+  SNPs.common 
+  
+  repeatInfo <- read.table(repeatFile, header=F)
+  
+  scaffolds <- unique(SNPs.common$CHROM)
+  
+  print("checking scaffolds")
+  
+  for (i in (1:length(scaffolds))) {
+    tt <- which(binData$Chromosome==as.character(scaffolds[[i]]))
+    tr <- which(repeatInfo$V1==as.character(scaffolds[[i]]))
+    starts <- binData$Start[tt]
+    breakPoints <- c(0,starts+stepSize)
+    
+    if (length(tt)>0) {
+      temp = subset(SNPs.common,CHROM==as.character(scaffolds[i]))
+      heteroHist <- hist(temp$POS[temp$Cr1GR1.2.KS3_Call=="0/1"],breaks=breakPoints,plot=FALSE)
+      majorHist <- hist(temp$POS[temp$Cr1GR1.2.KS3_Call=="0/0"],breaks=breakPoints,plot=FALSE)
+      minorHist <- hist(temp$POS[temp$Cr1GR1.2.KS3_Call=="1/1"],breaks=breakPoints,plot=FALSE)
+      binData$FractionHeterozygozity[tt] = heteroHist$counts/ totalCounts 
+      
+      
+      totalCounts = majorHist$counts+ majorHist$counts+minorHist$counts
+      binData$totalCounts[tt] = totalCounts
+      binData$heteroHistCounts[tt] = heteroHist$counts 
+      binData$majorHistCounts[tt] = majorHist$counts 
+      binData$minorHistCounts[tt] = minorHist$counts 
+      
+      if(length(tr) == length(tt)){
+        binData$repeatFraction[tt] = repeatInfo$V4[tr]     
+      }
+    }
+    cat(scaffolds[[i]],sep = ".")
+  }
+  print("Done")
+  return(binData)
+  
+  
+  
 }
+
 
 filterData <- function(sampleData,DNAsamples,RNAsamples, RNAlow=40, RNAhigh=2000,DNAlow=30,DNAhigh=200){
   
@@ -190,24 +279,25 @@ filterData <- function(sampleData,DNAsamples,RNAsamples, RNAlow=40, RNAhigh=2000
   # Different filters
   # Only keep heterozygous DNAsamples
   DataSetFiltered <- filterCallData(sampleData, DNAsamples)  
+  
   # Only keep heterozygous samples with DNA total count above 30 in all heterozygous samples
   DataSetFilteredAbundant <- filterTotalData(DataSetFiltered, DNAsamples,c(DNAlow,DNAhigh))  
-  # Only keep heterozygous samples with DNA total count above 40 in all heterozygous samples
+  
+  # Only keep heterozygous samples with RNA total count above 40 in all heterozygous samples
   DataSetFilteredAbundantBOTH <- filterTotalData(DataSetFilteredAbundant, RNAsamples,c(RNAlow,RNAhigh)) 
   return (DataSetFilteredAbundantBOTH)
 }
 
 
-getPvalues2 <- function(DataSetFilteredAbundantBOTH,DNAsamples,RNAsamples){
+getPvalues2 <- function(sampleData,DNAsamples,RNAsamples){
   # Calculate pValues 
-  DataSetFilteredAbundantBOTHwithPvalue <- Pvaluescalculation(DataSetFilteredAbundantBOTH, RNAsamples,DNAsamples)  
+  sampleDataPvalue <- Pvaluescalculation(sampleData, RNAsamples,DNAsamples)  
   
   # Correct for multiple testing
-  DataSetFilteredAbundantBOTHwithPvalue<-as.data.frame(DataSetFilteredAbundantBOTHwithPvalue)
-  DataSetInterHeteroAbundantBOTHwithPvalueCorrected <- MultipleTestCorrection(DataSetFilteredAbundantBOTHwithPvalue,RNAsamples)
+  sampleDataPvalue<-as.data.frame(sampleDataPvalue)
+  sampleDataPvalueCorrected <- MultipleTestCorrection(sampleDataPvalue,RNAsamples)
   
-  
-  return(DataSetInterHeteroAbundantBOTHwithPvalueCorrected)
+  return(sampleDataPvalueCorrected)
   
 }
 
@@ -251,25 +341,24 @@ boxScatterPlot <- function(x,y,ylabText="Major readCount",xlabText="Minor readCo
 }
 
 
-
-
-filterCallData  <- function(testData , samples, call="0/1"){
-  
+filterForHeterozygousSites  <- function(sampleData , samples, call="0/1"){
   # filter for heterozygous sites in all samples
   for(i in 1:length(samples)){
     name = paste(samples[i], "Call", sep="_")
-    testData <- testData[testData[name]==call,]		
+    sampleData <- sampleData[sampleData[name]==call,]		
   }
   return (testData)
 }
 
-filterTotalData <- function(Dataset , samples,cutoff=c(40,200)){
+
+filterForTotalCount <- function(Dataset , samples,cutoff=c(40,200)){
   for(i in 1:length(samples)){
     name = paste(samples[i], "Total", sep="_")
     Dataset <- Dataset[Dataset[name]>cutoff[1]	,]		
   }
   return (Dataset)
 }
+
 
 
 Pvaluescalculation <- function(testData,RNAsamples,DNAsamples){
@@ -389,15 +478,20 @@ getASEgenesIntersect <- function(Dataset,RNAsamples,rounds=10,cutoffNominal=0.00
 }
 
 
-getASEGenes <- function(DatasetOneSNPperGene,RNAsample,cutoffNominal=0.005, cutoffAdjusted=0.1,round=1){
-  
-  
+getASEGenesAdjusted <- function(DatasetOneSNPperGene,RNAsample, cutoffAdjusted=0.1){
   columnName  <- paste(RNAsample,"pValueCorrected",sep="_")
-  
-  Flowers <- DatasetOneSNPperGene[which(DatasetOneSNPperGene[columnName] <cutoffAdjusted),]
-  
+  dataSample <- DatasetOneSNPperGene[which(DatasetOneSNPperGene[columnName] <cutoffAdjusted),]
   return(Flowers$annotation)
+
 }
+
+getASEGenesNominal <- function(DatasetOneSNPperGene,RNAsample, cutoff=0.1){
+  columnName  <- paste(RNAsample,"pValue",sep="_")
+  dataSample <- DatasetOneSNPperGene[which(DatasetOneSNPperGene[columnName] <cutoffNominal),]
+  return(Flowers$annotation)
+  
+}
+
 
 getOneSNPperGene <- function(Dataset,classifier="annotation"){
   Dataset$duplicated <- duplicated.random(as.vector(Dataset[,classifier]))

@@ -38,6 +38,9 @@ main <- function(dataDir = "/Users/johanreimegard/Vetenskap/Data/capsella/Copy N
   # save data as a tab delimeted  file 
   write.table(binData,file=paste(SNPfile,"filter_heterozygous_repeats_CNVs_data.txt",sep="_"),quote=FALSE,row.names=FALSE,col.names=TRUE,sep="\t")
   
+  # load it from tab delimeted file
+  binData<-read.table(file=paste(SNPfile,"filter_heterozygous_repeats_CNVs_data.txt",sep="_") ,sep = "\t", header=TRUE) 
+  
   # reiterare and plot distribution to deterime good cutoffs
   cumulativeDistributionRepeat=0.7
   cumulativeDistributionHetero=0.8
@@ -76,11 +79,6 @@ main <- function(dataDir = "/Users/johanreimegard/Vetenskap/Data/capsella/Copy N
   pdfName <- paste("kept_for_analysis_scaffold",".summary.distribution.pdf",sep= "_")
   pdf(pdfName)    
   plotScaffoldInfo(binData)
-  dev.off()
-  
-  
-  pdfName <- paste("kept_for_analysis_scaffold",".summary.distribution.pdf",sep= "_All_")
-  pdf(pdfName)    
   dev.off()
   
   
@@ -244,7 +242,15 @@ FilterAndSaveRegionsToBED <- function(binData,SNPfile,cutoffValues){
 }
 
 
-
+getCutoff <- function(distribution,cumulativeDistribution=0.8){
+  EmpiricalDensityFunction <- ecdf(distribution)
+  InverseEmpiricalDensityFunction <- getInverseFunction(EmpiricalDensityFunction)
+  
+  cutoff=InverseEmpiricalDensityFunction(cumulativeDistribution)
+  
+  return (cutoff$root)
+  
+}
 
 plotScaffoldInfoSummary <- function(binData){
   chromsomeSpecific = binData
