@@ -9,12 +9,11 @@
 
 
 #plot CtrlFREEC results
-main <- function(dataDir = "/Users/johanreimegard/Vetenskap/Data/capsella/Copy Number Variation/ctrlfreec_bowtie/ratiofiles",
+main <- function(dataDir = "/proj/b2012122/private/FinalResults/Filters/filteringSteps",
                  stepSize=50000 ,
                  SNPfile = "BWA_genome.raw.vcf.Rfriendly" ,
                  repeatFile = "Crubella_183.fa.out.noheader.bed.bin",
-                 CtrlFreecFile ="CtrlFreec.r1GR1-2-KS3_DNA.STAR.ratio.txt"
-){
+                 CtrlFreecFile ="CtrlFreec.r1GR1-2-KS3_DNA.STAR.ratio.txt"){
   
   
   #   stepSize=50000
@@ -64,6 +63,68 @@ main <- function(dataDir = "/Users/johanreimegard/Vetenskap/Data/capsella/Copy N
   
   #check the overall coverage filtering 
   plotScaffoldInfo(binData)
+  
+  
+  dev.off()
+  
+  # plotAlltoFiles
+  
+  for(j in seq(1,7, by=2)){
+    
+    pdfName <- paste("kept_for_analysis_scaffold",j,(j+1),"distribution.pdf",sep= "_")
+    pdf(pdfName)    
+    plot2Chromosomes(binData,j)
+    dev.off()
+    
+  }
+  
+  pdfName <- paste("kept_for_analysis_scaffold",".summary.distribution.pdf",sep= "_")
+  pdf(pdfName)    
+  plotScaffoldInfo(binData)
+  dev.off()
+  
+  
+  
+  
+}
+
+mainFromTabDelimetedFile <- function(dataDir = "/proj/b2012122/private/FinalResults/Filters/filteringSteps",
+                 stepSize=50000 ,
+                 SNPfile = "BWA_genome.raw.vcf.Rfriendly"){
+  
+  
+  
+  setwd(dataDir)
+  
+  # load it from tab delimeted file
+  binData<-read.table(file=paste(SNPfile,"filter_heterozygous_repeats_CNVs_data.txt",sep="_") ,sep = "\t", header=TRUE) 
+  
+  # reiterare and plot distribution to deterime good cutoffs
+  cumulativeDistributionRepeat=0.7
+  cumulativeDistributionHetero=0.8
+  plotDistributionWithCutoff(binData,cumulativeDistributionRepeat,cumulativeDistributionHetero) 
+  
+  
+  # print the cutoffs used to pdf
+  pdf("CutoffSelectionDistribution.pdf")
+  cutoffValues <- plotDistributionWithCutoff(binData,cumulativeDistributionRepeat,cumulativeDistributionHetero)
+  dev.off()
+  
+  #Use the cutoffs and save bedfiles with regions of high repeat and high heterozygous regions
+  
+  binData = FilterAndSaveRegionsToBED(binData,SNPfile,cutoffValues)
+  
+  
+  #check the chromosomes (scaffold j and j+1 will be plotted)
+  
+  j=1
+  plot2Chromosomes(binData,j)
+  
+  #check the overall coverage filtering 
+  plotScaffoldInfo(binData)
+  
+  
+  dev.off()
   
   # plotAlltoFiles
   
